@@ -1,0 +1,516 @@
+/* ===== VS CODE DARK THEME - VERTICAL LAYOUT ===== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ===== HEADER ===== */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #313244;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.header h1 {
+    color: #89b4fa;
+    font-size: 1.5rem;
+    font-weight: normal;
+}
+
+.header h1::before {
+    content: '❯ ';
+    color: #a6e3a1;
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid #313244;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+    background: #313244;
+    color: #cdd6f4;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #89b4fa;
+    color: #1e1e2e;
+    border-color: #89b4fa;
+}
+.btn-primary:hover {
+    background: #74c7ec;
+}
+
+.btn-secondary {
+    background: #313244;
+    color: #cdd6f4;
+    border-color: #45475a;
+}
+.btn-secondary:hover {
+    background: #45475a;
+}
+
+.btn-success {
+    background: #a6e3a1;
+    color: #1e1e2e;
+    border-color: #a6e3a1;
+}
+.btn-success:hover {
+    background: #94e2d5;
+}
+
+.btn-danger {
+    background: #f38ba8;
+    color: #1e1e2e;
+    border-color: #f38ba8;
+}
+.btn-danger:hover {
+    background: #eba0ac;
+}
+
+/* ===== CALENDAR GRID - VERTICAL ===== */
+.calendar-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.day-cell {
+    background: #1e1e2e;
+    border-radius: 6px;
+    padding: 10px 14px;
+    min-height: 60px;
+    border: 1px solid #313244;
+    width: 100%;
+}
+
+.day-cell.today {
+    border-color: #89b4fa;
+    background: #181825;
+}
+
+/* ===== DAY HEADER ===== */
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    color: #6c7086;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #313244;
+    padding-bottom: 4px;
+}
+
+.day-number {
+    color: #6c7086;
+}
+
+.day-number.today-num {
+    color: #89b4fa;
+}
+
+.no-meetings {
+    color: #45475a;
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 8px 0;
+}
+
+/* ===== MEETING ENTRY ===== */
+.meeting-entry {
+    background: #181825;
+    border-radius: 4px;
+    padding: 8px 12px;
+    padding-right: 40px;
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+    border-left: 3px solid #89b4fa;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Current Meeting - Green */
+.meeting-current {
+    border-left-color: #a6e3a1 !important;
+    background: #1a2e1e !important;
+}
+.meeting-current .entry-time {
+    color: #a6e3a1 !important;
+}
+.meeting-current .entry-name {
+    color: #a6e3a1 !important;
+}
+.meeting-current .entry-count {
+    color: #a6e3a1 !important;
+}
+
+/* Upcoming Meeting - Yellow */
+.meeting-upcoming {
+    border-left-color: #f9e2af !important;
+    background: #2e2a1a !important;
+}
+.meeting-upcoming .entry-time {
+    color: #f9e2af !important;
+}
+.meeting-upcoming .entry-name {
+    color: #f9e2af !important;
+}
+.meeting-upcoming .entry-count {
+    color: #f9e2af !important;
+}
+
+/* Badges */
+.badge-current {
+    color: #a6e3a1;
+    font-weight: bold;
+    font-size: 0.6rem;
+    margin-right: 4px;
+}
+
+.badge-upcoming {
+    color: #f9e2af;
+    font-weight: bold;
+    font-size: 0.6rem;
+    margin-right: 4px;
+}
+
+/* Entry Top Row - all fields in one line */
+.entry-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.entry-time {
+    color: #89b4fa;
+    font-weight: bold;
+    font-size: 0.8rem;
+    min-width: 50px;
+}
+
+.entry-name {
+    color: #cdd6f4;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+    flex: 1;
+    min-width: 120px;
+}
+.entry-name:hover {
+    color: #89b4fa;
+}
+
+.entry-type {
+    padding: 0 8px;
+    border-radius: 3px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.type-private {
+    background: #cba6f7;
+    color: #1e1e2e;
+}
+.type-group {
+    background: #f9e2af;
+    color: #1e1e2e;
+}
+
+.entry-participants {
+    color: #6c7086;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+.entry-count {
+    font-weight: bold;
+    font-size: 0.7rem;
+    padding: 0 6px;
+    white-space: nowrap;
+    min-width: 30px;
+    text-align: center;
+}
+.count-high {
+    color: #a6e3a1;
+}
+.count-medium {
+    color: #f9e2af;
+}
+.count-low {
+    color: #f38ba8;
+}
+.count-zero {
+    color: #45475a;
+}
+
+.entry-rate {
+    color: #fab387;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    min-width: 60px;
+}
+
+/* Entry Students */
+.entry-students {
+    font-size: 0.65rem;
+    color: #6c7086;
+    padding-left: 4px;
+}
+
+/* Homework & Comments */
+.entry-homework {
+    font-size: 0.6rem;
+    color: #f9e2af;
+    padding-left: 4px;
+}
+
+.entry-comments {
+    font-size: 0.6rem;
+    color: #94e2d5;
+    padding-left: 4px;
+}
+
+/* Actions */
+.entry-actions {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    display: flex;
+    gap: 4px;
+}
+
+.entry-edit,
+.entry-delete {
+    background: none;
+    border: none;
+    color: #45475a;
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 0 4px;
+}
+
+.entry-edit:hover {
+    color: #89b4fa;
+}
+.entry-delete:hover {
+    color: #f38ba8;
+}
+
+/* ===== MODALS ===== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background: #1e1e2e;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 480px;
+    width: 90%;
+    border: 1px solid #313244;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal h2 {
+    color: #89b4fa;
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    font-weight: normal;
+}
+
+.modal label {
+    display: block;
+    margin: 10px 0 4px;
+    font-size: 0.75rem;
+    color: #6c7086;
+}
+
+.modal input,
+.modal select,
+.modal textarea {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #313244;
+    background: #181825;
+    color: #cdd6f4;
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+
+.modal input:focus,
+.modal select:focus,
+.modal textarea:focus {
+    outline: none;
+    border-color: #89b4fa;
+}
+
+.modal textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    justify-content: flex-end;
+}
+
+.student-list {
+    background: #181825;
+    border-radius: 4px;
+    padding: 4px;
+    min-height: 30px;
+    border: 1px solid #313244;
+    margin-top: 4px;
+}
+
+.student-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    border-bottom: 1px solid #313244;
+    color: #cdd6f4;
+}
+
+.student-item button {
+    background: none;
+    border: none;
+    color: #f38ba8;
+    cursor: pointer;
+}
+
+.empty-students {
+    color: #45475a;
+    font-size: 0.7rem;
+    padding: 6px;
+    text-align: center;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .day-cell {
+        padding: 8px 10px;
+    }
+    .header h1 {
+        font-size: 1.2rem;
+    }
+    .btn {
+        font-size: 0.65rem;
+        padding: 4px 10px;
+    }
+    .entry-top {
+        gap: 6px;
+    }
+    .entry-name {
+        font-size: 0.75rem;
+        min-width: 80px;
+    }
+    .entry-time {
+        font-size: 0.7rem;
+        min-width: 40px;
+    }
+    .entry-participants {
+        font-size: 0.6rem;
+    }
+    .entry-count {
+        font-size: 0.6rem;
+    }
+    .entry-rate {
+        font-size: 0.6rem;
+    }
+}
+
+@media (max-width: 500px) {
+    .day-cell {
+        padding: 6px 6px;
+    }
+    .entry-top {
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+    .entry-name {
+        font-size: 0.7rem;
+        min-width: 100px;
+        order: 2;
+    }
+    .entry-time {
+        font-size: 0.6rem;
+        min-width: 35px;
+        order: 1;
+    }
+    .entry-type {
+        font-size: 0.5rem;
+        padding: 0 4px;
+        order: 3;
+    }
+    .entry-participants {
+        font-size: 0.5rem;
+        order: 4;
+    }
+    .entry-count {
+        font-size: 0.5rem;
+        min-width: 25px;
+        order: 5;
+    }
+    .entry-rate {
+        font-size: 0.5rem;
+        min-width: 40px;
+        order: 6;
+    }
+    .entry-students {
+        font-size: 0.55rem;
+    }
+    .entry-homework {
+        font-size: 0.5rem;
+    }
+    .entry-comments {
+        font-size: 0.5rem;
+    }
+}

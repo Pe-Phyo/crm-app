@@ -1,0 +1,19 @@
+# Database files
+data/
+*.db
+*.sqlite
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temporary files
+*.tmp
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
