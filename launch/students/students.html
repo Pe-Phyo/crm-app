@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Students</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧑‍🎓 Students</h1>
+            <div>
+                <button id="backBtn" class="btn btn-secondary">← Back</button>
+            </div>
+        </div>
+
+        <!-- Setup screen (first time) -->
+        <div id="setupScreen" class="login-box" style="display:none;">
+            <h2>Set Master Password</h2>
+            <p style="color:#94a3b8;font-size:14px;">This password protects all student data. It cannot be recovered if lost.</p>
+            <input type="password" id="setupPassword" placeholder="Enter password (min 6 chars)">
+            <input type="password" id="setupConfirm" placeholder="Confirm password">
+            <button id="setupBtn" class="btn btn-primary">Set Password</button>
+            <div id="setupError" class="error-text"></div>
+        </div>
+
+        <!-- Login screen -->
+        <div id="loginScreen" class="login-box" style="display:none;">
+            <h2>Unlock Student Data</h2>
+            <input type="password" id="passwordInput" placeholder="Master password" autofocus>
+            <button id="loginBtn" class="btn btn-primary">Unlock</button>
+            <div id="loginError" class="error-text"></div>
+        </div>
+
+        <!-- Main panel (hidden until login) -->
+        <div id="mainPanel" style="display:none;">
+            <div class="panel-layout">
+                <div class="main-panel" id="studentListPanel">
+                    <div class="panel-header">
+                        <h3>Active Students</h3>
+                        <button id="addStudentBtn" class="btn btn-primary">➕ Add Student</button>
+                    </div>
+                    <div id="studentList"></div>
+                </div>
+                <div class="side-panel">
+                    <h3>Action Items</h3>
+                    <div id="actionItems"></div>
+                    <h3 style="margin-top:20px;">Available Slots</h3>
+                    <div class="placeholder-box">Coming soon</div>
+                    <h3 style="margin-top:20px;">Telegram Messages</h3>
+                    <div class="placeholder-box">Coming soon</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Student Modal (stub) -->
+    <div class="modal-overlay" id="studentModal">
+        <div class="modal">
+            <h2>Add Student</h2>
+            <p>Student form will be built next.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modalCancelBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
