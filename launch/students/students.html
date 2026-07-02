@@ -14,17 +14,15 @@
             </div>
         </div>
 
-        <!-- Setup screen (first time) -->
+        <!-- Setup / Login screens -->
         <div id="setupScreen" class="login-box" style="display:none;">
             <h2>Set Master Password</h2>
-            <p style="color:#94a3b8;font-size:14px;">This password protects all student data. It cannot be recovered if lost.</p>
-            <input type="password" id="setupPassword" placeholder="Enter password (min 6 chars)">
+            <p style="color:#94a3b8;font-size:14px;">This password protects all student data. Cannot be recovered.</p>
+            <input type="password" id="setupPassword" placeholder="Password (min 6 chars)">
             <input type="password" id="setupConfirm" placeholder="Confirm password">
             <button id="setupBtn" class="btn btn-primary">Set Password</button>
             <div id="setupError" class="error-text"></div>
         </div>
-
-        <!-- Login screen -->
         <div id="loginScreen" class="login-box" style="display:none;">
             <h2>Unlock Student Data</h2>
             <input type="password" id="passwordInput" placeholder="Master password" autofocus>
@@ -32,10 +30,28 @@
             <div id="loginError" class="error-text"></div>
         </div>
 
-        <!-- Main panel (hidden until login) -->
+        <!-- Main dashboard -->
         <div id="mainPanel" style="display:none;">
+            <!-- Search & Filters -->
+            <div class="filter-bar">
+                <input type="text" id="searchInput" placeholder="Search by name...">
+                <select id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+                <select id="paymentFilter">
+                    <option value="">Payment Status</option>
+                    <option value="paid">Paid this month</option>
+                    <option value="overdue">Overdue</option>
+                </select>
+                <input type="number" id="rateMin" placeholder="Rate min" style="width:80px;">
+                <input type="number" id="rateMax" placeholder="Rate max" style="width:80px;">
+                <button id="applyFiltersBtn" class="btn btn-secondary">Filter</button>
+            </div>
+
             <div class="panel-layout">
-                <div class="main-panel" id="studentListPanel">
+                <div class="main-panel">
                     <div class="panel-header">
                         <h3>Active Students</h3>
                         <button id="addStudentBtn" class="btn btn-primary">➕ Add Student</button>
@@ -47,20 +63,100 @@
                     <div id="actionItems"></div>
                     <h3 style="margin-top:20px;">Available Slots</h3>
                     <div class="placeholder-box">Coming soon</div>
-                    <h3 style="margin-top:20px;">Telegram Messages</h3>
+                    <h3 style="margin-top:20px;">Telegram</h3>
                     <div class="placeholder-box">Coming soon</div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Add/Edit Student Modal (stub) -->
-    <div class="modal-overlay" id="studentModal">
-        <div class="modal">
-            <h2>Add Student</h2>
-            <p>Student form will be built next.</p>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" id="modalCancelBtn">Close</button>
+        <!-- Add/Edit Student Modal -->
+        <div class="modal-overlay" id="studentModal">
+            <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto;">
+                <h2 id="modalTitle">Add Student</h2>
+                <form id="studentForm">
+                    <input type="hidden" id="studentUuid">
+                    <label>Name *</label>
+                    <input type="text" name="name" required>
+
+                    <label>Location</label>
+                    <input type="text" name="location">
+
+                    <label>Timezone</label>
+                    <input type="text" name="timezone" value="Asia/Yangon">
+
+                    <label>Age Group</label>
+                    <select name="age_group">
+                        <option>Child</option>
+                        <option>Young Adult</option>
+                        <option selected>Adult</option>
+                    </select>
+
+                    <label>Academic Year</label>
+                    <input type="text" name="academic_year">
+
+                    <label>Phone</label>
+                    <input type="text" name="phone">
+
+                    <label>Telegram</label>
+                    <input type="text" name="telegram">
+
+                    <label>Email</label>
+                    <input type="email" name="email">
+
+                    <label>Rate (MMK) *</label>
+                    <input type="number" name="rate" required>
+
+                    <label>
+                        <input type="checkbox" name="is_minor" id="isMinorCheckbox"> Minor
+                    </label>
+                    <div id="minorFields" style="display:none;">
+                        <label>Parent Name</label>
+                        <input type="text" name="parent_name">
+                        <label>Parent Phone</label>
+                        <input type="text" name="parent_phone">
+                    </div>
+
+                    <label>Educational Goals</label>
+                    <textarea name="educational_goals" rows="2"></textarea>
+
+                    <label>Behavioral Comments</label>
+                    <textarea name="behavioral_comments" rows="2"></textarea>
+
+                    <label>General Comments</label>
+                    <textarea name="general_comments" rows="2"></textarea>
+
+                    <!-- Meeting Times Sub-form -->
+                    <fieldset style="border:1px solid #475569;padding:10px;border-radius:8px;margin-top:15px;">
+                        <legend>Meeting Times</legend>
+                        <div id="meetingTimesList"></div>
+                        <div class="meeting-time-inputs">
+                            <select id="meetingDay">
+                                <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+                                <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+                            </select>
+                            <input type="time" id="meetingTime" value="09:00">
+                            <select id="meetingType">
+                                <option value="private">Private</option>
+                                <option value="group">Group</option>
+                            </select>
+                            <label><input type="checkbox" id="meetingInPerson"> In‑person</label>
+                            <button type="button" id="addMeetingBtn" class="btn btn-secondary">+ Add</button>
+                        </div>
+                    </fieldset>
+
+                    <div class="modal-actions" style="margin-top:20px;">
+                        <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+                        <button type="submit" class="btn btn-success">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Student Detail Modal -->
+        <div class="modal-overlay" id="detailModal">
+            <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto;">
+                <div id="detailContent"></div>
+                <button id="closeDetailBtn" class="btn btn-secondary" style="margin-top:15px;">Close</button>
             </div>
         </div>
     </div>

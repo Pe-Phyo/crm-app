@@ -16,6 +16,8 @@ class StudentCoordinator:
     def handle(self, method: str, path: str, body: str = None, headers: dict = None) -> Tuple[Any, int]:
         token = (headers or {}).get('Authorization', '').replace('Bearer ', '')
         # Routes without auth
+        if path == '/auth/status' and method == 'GET':
+            return self._status()
         if path == '/auth/setup' and method == 'POST':
             return self._setup(body)
         if path == '/auth/login' and method == 'POST':
@@ -96,6 +98,13 @@ class StudentCoordinator:
         if token is None:
             return {'error': 'Invalid password'}, 401
         return {'token': token}, 200
+
+    def _status(self):
+        import os
+        index_db_path = os.path.join(self.data_dir, 'index.db')
+        if os.path.exists(index_db_path):
+            return {'setup': True}, 200
+        return {'setup': False}, 200
 
     # Student list
     def _list_students(self, conn) -> Tuple[Any, int]:

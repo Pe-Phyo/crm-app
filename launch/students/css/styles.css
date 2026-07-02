@@ -1,18 +1,54 @@
-/* Dark theme matching meetings */
 body { background: #0f172a; color: #e2e8f0; font-family: sans-serif; margin: 0; padding: 20px; }
 .container { max-width: 1200px; margin: 0 auto; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+/* Buttons */
 .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: #475569; color: white; }
+.btn-success { background: #10b981; color: white; }
 .btn-danger { background: #ef4444; color: white; }
-.error-text { color: #f87171; font-size: 12px; margin-top: 10px; }
+
+/* Auth screens */
 .login-box { max-width: 400px; margin: 100px auto; text-align: center; }
 .login-box input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; }
+
+/* Filter bar */
+.filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+.filter-bar input, .filter-bar select { padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; }
+
+/* Panel layout */
 .panel-layout { display: flex; gap: 20px; }
 .main-panel { flex: 3; }
 .side-panel { flex: 1; background: #1e293b; padding: 20px; border-radius: 12px; }
-.placeholder-box { background: #334155; padding: 10px; border-radius: 8px; color: #94a3b8; font-size: 12px; margin-bottom: 10px; }
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+
+/* Student cards */
+.student-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: background 0.2s; }
+.student-card:hover { background: #2d3a4f; }
+.student-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.status-badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; text-transform: uppercase; }
+.status-badge.active { background: #10b981; color: white; }
+.status-badge.inactive { background: #ef4444; color: white; }
+.student-card-body { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: #cbd5e1; }
+
+/* Action items */
+.action-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #334155; }
+.action-item.done .action-text { text-decoration: line-through; color: #64748b; }
+.action-btns button { background: none; border: none; cursor: pointer; color: #e2e8f0; font-size: 16px; }
+
+/* Modals */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
 .modal-overlay.active { display: flex; }
-.modal { background: #1e293b; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; }
+.modal { background: #1e293b; padding: 30px; border-radius: 12px; width: 90%; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* Form styles */
+form label { display: block; margin-top: 10px; font-size: 14px; color: #94a3b8; }
+form input, form select, form textarea { width: 100%; padding: 8px; margin-top: 4px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #e2e8f0; }
+form textarea { resize: vertical; }
+
+.meeting-time-inputs { display: flex; gap: 5px; align-items: center; margin-top: 5px; }
+.meeting-time-item { display: flex; justify-content: space-between; background: #0f172a; padding: 5px; border-radius: 4px; margin: 3px 0; }
+.remove-mt-btn { background: none; border: none; color: #ef4444; cursor: pointer; }
+
+.placeholder-box { background: #334155; padding: 10px; border-radius: 8px; color: #94a3b8; font-size: 12px; margin-bottom: 10px; }

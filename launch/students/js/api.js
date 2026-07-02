@@ -42,10 +42,62 @@ export async function login(password) {
     return data;
 }
 
+// Students CRUD
 export async function getStudents() {
     return await apiCall('GET', '/students');
 }
 
+export async function getStudent(uuid) {
+    return await apiCall('GET', `/students/${uuid}`);
+}
+
+export async function createStudent(data) {
+    return await apiCall('POST', '/students', data);
+}
+
+export async function updateStudent(uuid, data) {
+    return await apiCall('PUT', `/students/${uuid}`, data);
+}
+
+export async function deleteStudent(uuid) {
+    return await apiCall('DELETE', `/students/${uuid}`);
+}
+
+// Attendance
+export async function getAttendance(uuid) {
+    return await apiCall('GET', `/students/${uuid}/attendance`);
+}
+
+export async function addAttendance(uuid, data) {
+    return await apiCall('POST', `/students/${uuid}/attendance`, data);
+}
+
+export async function updateAttendance(uuid, logId, data) {
+    return await apiCall('PUT', `/students/${uuid}/attendance/${logId}`, data);
+}
+
+// Payments
+export async function getPayments(uuid) {
+    return await apiCall('GET', `/students/${uuid}/payments`);
+}
+
+export async function addPayment(uuid, data) {
+    return await apiCall('POST', `/students/${uuid}/payments`, data);
+}
+
+// Actions
 export async function getActions() {
     return await apiCall('GET', '/actions');
+}
+
+export async function addAction(text) {
+    return await apiCall('POST', '/actions', { text });
+}
+
+export async function updateAction(id, updates) {
+    return await apiCall('PUT', `/actions/${id}`, updates);
+}
+
+export async function deleteAction(id) {
+    return await apiCall('DELETE', `/actions/${id}`);
 }
