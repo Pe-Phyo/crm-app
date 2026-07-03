@@ -1,71 +1,71 @@
-Here's your updated README reflecting the current state of the project.
+Here is the updated `README.md` with the current project state, no emojis, ready to cut and paste.
 
 ---
 
-## 📄 Updated README.md
-
 ```markdown
-# CRM App - Meeting Launcher
+# CRM App - Meeting Launcher & Student Manager
 
-A lightweight, privacy-focused meeting management system for teachers with limited internet connectivity.
+A lightweight, privacy-focused CRM for teachers with limited internet connectivity.  
+Runs entirely from a USB thumb drive, stores data in encrypted SQLite databases, and works offline.
 
 ---
 
 ## Project Overview
 
-This is a modular CRM application that handles:
-- **Meeting Launcher** (Local): One-click Jitsi join with low-bandwidth settings
-- **Database Storage** (SQLite): Persistent data storage on thumb drive
-- **Telegram Bot** (Future): Automated FAQs, scheduling assistance, student communication
-- **Client Management** (Future): Individual client profiles with custom data
-- **Analytics** (Future): Track attendance, revenue, and class metrics
+This modular CRM handles:
+
+- Meeting Launcher: one-click Jitsi join with low-bandwidth settings
+- Student Management: secure, encrypted client profiles with attendance, payments, and notes
+- Database Storage: SQLite / SQLCipher on thumb drive
+- Future: Telegram bot, analytics, automation scripts
 
 ---
 
 ## Current Features
 
 ### Meeting Launcher
-- **One-click joining** via Brave browser (no extra clicks)
-- **Low bandwidth by default** (video off, mic off, skip pre-join screen)
-- **Weekly calendar view** (vertical layout, current day on top)
-- **Current meeting highlighted in green** (happening now)
-- **Upcoming meeting highlighted in yellow** (next meeting after current time)
-- **Private & Group classes** (group capacity: 9 students)
-- **Countdown tracker** (tracks remaining lessons per meeting)
-- **Rate tracking** (price per lesson in MMK)
-- **Homework & comments fields** (per meeting)
-- **Student management** (add/remove students per meeting)
-- **Data persistence** (SQLite database on thumb drive)
-- **No credit card required** – completely free
-- **Works offline** (no internet needed for the dashboard)
+- One-click Jitsi joining (Brave browser, no extra clicks)
+- Low bandwidth by default (video off, mic off, skip pre-join)
+- Vertical weekly calendar, current day on top
+- Current meeting highlighted, upcoming meeting highlighted
+- Private and group classes (max 9 students)
+- Per-meeting countdown tracker, rate (MMK), homework, comments
+- Add/remove students per meeting
+- SQLite database storage
+- Works offline
 
-### Data Storage
-- **SQLite database** for all meetings
-- **Individual student databases** (future: each client gets their own .db file)
-- **Scripts folder** (future: FAQs, funnels, templates)
-- **Analytics folder** (future: weekly/monthly reports)
+### Student Manager (Phase 2 - in progress)
+- Master password protection with per-session SSL encryption
+- Encrypted central index database (SQLCipher)
+- Individual per-student encrypted databases
+- Student list with search and filters (status, rate, payment)
+- Full student profiles: contact info, age group, academic year, meetings, goals, comments
+- Attendance logging per student
+- Payment tracking (manual entry, receipt image storage ready)
+- Global action items / to-do list
+- All student data encrypted at rest
 
 ---
 
 ## Tech Stack
 
 ### Current Components
-
-| Component | Technology | Why |
-|-----------|------------|-----|
-| **Backend Server** | Python + SQLite | Lightweight, runs on thumb drive |
-| **Frontend** | HTML + CSS + JavaScript (Modular) | No dependencies, works in any browser |
-| **Browser** | Brave | Privacy-focused, Chromium-based for Jitsi |
-| **Version Control** | Git | Local repository on thumb drive |
-| **Database** | SQLite | File-based, secure, portable |
+| Component      | Technology                        | Notes                           |
+|----------------|-----------------------------------|---------------------------------|
+| Backend Server | Python 3.12                       | Lightweight, runs on thumb drive|
+| Database       | SQLite / SQLCipher                | File-based, encrypted per-student|
+| Frontend       | HTML, CSS, JavaScript (ES modules)| No external dependencies        |
+| Browser        | Brave (Chromium-based)            | Privacy-focused                 |
+| Version Control| Git                               | Local + GitHub                  |
+| Cryptography   | cryptography, pysqlcipher3        | Portable in `libs/` folder      |
+| SSL/TLS        | Self-signed per-session certs     | Local CA installed once         |
 
 ### Future Components
-
-| Component | Technology | Why |
-|-----------|------------|-----|
-| Telegram Bot | Python + python-telegram-bot | Open source, well-documented |
-| LLM Integration | Hugging Face (Padauk) or Ollama | Burmese language support |
-| Cloud Sync | Render (free tier) | Optional 24/7 backup |
+| Component      | Technology                        | Notes                           |
+|----------------|-----------------------------------|---------------------------------|
+| Telegram Bot   | python-telegram-bot               |                                 |
+| LLM Integration| Hugging Face or Ollama            | Burmese language support        |
+| Cloud Sync     | Render (free tier)                | Optional backup                 |
 
 ---
 
@@ -73,23 +73,49 @@ This is a modular CRM application that handles:
 
 ```
 crm-app/
-├── main.py                          # Server launcher (run this)
+├── main.py                      # Ultra-thin launcher
+├── src/
+│   ├── server.py                # HTTPS server, SSL, routing
+│   ├── meetings/
+│   │   ├── db.py                # Meetings DB init & CRUD
+│   │   └── coordinator.py       # Meetings API router
+│   └── students/
+│       ├── coordinator.py       # Student API router
+│       ├── crypto.py            # Encryption & key derivation
+│       ├── index_db.py          # Encrypted central index
+│       ├── student_db.py        # Per-student encrypted DB
+│       ├── auth.py              # Password, session, expiry
+│       ├── actions.py           # Action items logic
+│       └── models.py            # Data structures
 ├── launch/
-│   ├── index.html                   # Main dashboard
-│   └── meetings/
-│       ├── meetings.html            # Meeting view
-│       ├── css/
-│       │   └── styles.css           # Dark theme (VS Code style)
+│   ├── index.html               # Main dashboard
+│   ├── meetings/                # Meetings frontend
+│   │   ├── meetings.html
+│   │   ├── css/styles.css
+│   │   └── js/
+│   │       ├── api.js
+│   │       ├── app.js
+│   │       ├── config.js
+│   │       └── render.js
+│   └── students/                # Student frontend
+│       ├── students.html
+│       ├── css/styles.css
 │       └── js/
-│           ├── api.js               # API calls to backend
-│           ├── app.js               # App controller
-│           ├── config.js            # Constants
-│           └── render.js            # UI rendering
+│           ├── api.js
+│           ├── app.js
+│           ├── config.js
+│           └── render.js
 ├── data/
-│   └── meetings/
-│       └── meetings.db              # SQLite database (auto-created)
-├── README.md                        # This file
-└── .gitignore                       # Git exclusions
+│   ├── meetings/
+│   │   └── meetings.db          # Meetings (unencrypted)
+│   ├── students/                # Student encrypted DBs
+│   │   ├── index.db             # Central index (encrypted)
+│   │   ├── index.salt           # Salt file for key derivation
+│   │   └── {uuid}.sqlite        # Per-student DBs
+│   └── certs/                   # SSL certificates (auto-generated)
+├── libs/                        # Portable Python packages
+├── README.md
+└── .gitignore
 ```
 
 ---
@@ -97,168 +123,105 @@ crm-app/
 ## How It Works
 
 ### Launch the App
+1. Open a terminal in the `crm-app` folder.
+2. Run: `PYTHONPATH=./libs python3 main.py`
+3. The server starts with HTTPS on `https://localhost:8080` and opens the dashboard.
 
-1. **Run `main.py`** from the terminal
-2. The server starts and opens the dashboard in your browser
-3. Click "Launch Meetings" to open the meeting view
+### Meetings
+- Click "Launch Meetings" to manage weekly meetings.
+- Add meetings with name, day, time, type, Jitsi link, students, rate, homework, comments.
+- Click a meeting name or countdown to join via Jitsi with low-bandwidth settings.
+- Edit or delete meetings using the buttons on each entry.
 
-### Add a Meeting
+### Students (requires master password)
+- First visit: set a strong master password.
+- Subsequent visits: log in with the master password (session token + SSL).
+- Dashboard shows student list (searchable, filterable) and side panel with action items.
+- Add Student form includes:
+  - Name, location, timezone, age group, academic year
+  - Contact: phone, Telegram, email
+  - Minor checkbox (shows parent fields)
+  - Rate (MMK)
+  - Multiple custom meeting times (day, time, type, in-person flag)
+  - Educational goals, behavioral comments, general comments
+- Click a student card to view details: attendance log, payments, meetings summary.
+- Action items side panel: add, toggle, delete global to-dos.
 
-1. Click **"Add"** button
-2. Fill in the meeting details:
-   - Name (e.g., "Math Group A")
-   - Day (Sunday–Saturday)
-   - Time (e.g., 09:00)
-   - Type (Private or Group)
-   - Students (type each name, press Enter to add)
-   - Jitsi Link (e.g., `https://meet.jit.si/room`)
-   - Rate (price per lesson in MMK)
-   - Homework (optional)
-   - Comments (optional)
-3. Click **"Add"** – the meeting appears in the calendar
-
-### Join a Meeting
-
-- Click the **meeting name** or the **countdown number**
-- Jitsi opens in a new tab with:
-  - Low bandwidth mode
-  - Camera off
-  - Microphone off
-  - Pre-join screen skipped
-
-### Edit a Meeting
-
-- Click the **✎** button on any meeting
-- Update the fields
-- Click **"Save"**
-
-### Delete a Meeting
-
-- Click the **✕** button on any meeting
-- Confirm deletion
-
-### Track Progress
-
-- Each meeting has a **countdown** (starts at 8 lessons)
-- Each time you click a meeting, the count decreases by 1
-- Click **"Reset"** to reset all counts to 8
-
----
-
-## Data Storage
-
-### Meetings Database
-- **Location:** `data/meetings/meetings.db`
-- **Format:** SQLite (secure, not plain text)
-- **Schema:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | TEXT | Unique meeting ID |
-| `day` | TEXT | Sunday–Saturday |
-| `time` | TEXT | HH:MM (24-hour) |
-| `nickname` | TEXT | Display name |
-| `type` | TEXT | 'private' or 'group' |
-| `student_ids` | TEXT | Comma-separated student IDs |
-| `student_names` | TEXT | Comma-separated student names |
-| `link` | TEXT | Jitsi URL |
-| `count` | INTEGER | Lessons remaining (default: 8) |
-| `rate` | INTEGER | Price per lesson (MMK) |
-| `homework` | TEXT | Homework assignment |
-| `comments` | TEXT | Notes for next lesson |
-| `attendance` | TEXT | Comma-separated student IDs who attended |
-| `created` | TEXT | Timestamp |
-| `updated` | TEXT | Timestamp |
-
----
-
-## Future Data Architecture
-
-```
-data/
-├── meetings/
-│   └── meetings.db                # All meetings
-├── students/
-│   ├── stu_xxxxxx.db              # Individual student profile
-│   ├── stu_yyyyyy.db              # Individual student profile
-│   └── stu_zzzzzz.db              # Individual student profile
-├── scripts/
-│   ├── faqs/
-│   │   ├── welcome.db
-│   │   └── homework-reminder.db
-│   ├── funnels/
-│   │   └── new-student.db
-│   └── templates/
-│       └── class-reminder.db
-└── analytics/
-    ├── weekly/
-    │   └── 2025-w1.db
-    └── monthly/
-        └── 2025-01.db
-```
+All student data is encrypted with SQLCipher. The central index database is encrypted with a key derived from the master password. Each student's database has its own random key, stored inside the index.
 
 ---
 
 ## Installation & Setup
 
 ### Prerequisites
-- Linux Mint 22.3 (or any Ubuntu-based)
+- Ubuntu-based Linux (tested on Linux Mint 22.3)
 - Python 3.6+
-- Brave browser (recommended) or Firefox
-- Git (optional, for version control)
+- Brave or Firefox browser
+- System library: `libsqlcipher-dev`
 
-### Setup
-
-1. **Copy the `crm-app` folder** to your thumb drive
-2. **Open a terminal** in the `crm-app` folder
-3. **Run the launcher:**
+### One-time setup
+1. Copy the `crm-app` folder to your USB drive.
+2. Install system dependency: `sudo apt install libsqlcipher-dev`
+3. Navigate to the folder: `cd /path/to/crm-app`
+4. Create portable library folder and install packages:
    ```bash
-   python3 main.py
+   mkdir -p libs
+   pip install --target=./libs pysqlcipher3 cryptography
    ```
-4. **Open your browser** to `http://localhost:8080/launch/index.html`
-5. **Click "Launch Meetings"** to start
+5. Run the app once to generate SSL certificates:
+   ```bash
+   PYTHONPATH=./libs python3 main.py
+   ```
+6. Install the generated local CA certificate into your system trust store:
+   ```bash
+   sudo cp data/certs/ca.crt /usr/local/share/ca-certificates/crm-ca.crt
+   sudo update-ca-certificates
+   ```
+   Restart your browser afterwards.
+
+### Running normally
+```bash
+cd /path/to/crm-app
+PYTHONPATH=./libs python3 main.py
+```
+Open `https://localhost:8080/launch/index.html` (or let the launcher open it).
 
 ---
 
-## Jitsi Low-Bandwidth Settings
+## Security Model
 
-Each meeting link automatically includes:
-
-```
-#config.prejoinConfig.enabled=false
-&config.startWithVideoMuted=true
-&config.startWithAudioMuted=true
-&config.disableLobby=true
-```
-
-This ensures:
-- No "Join" button to click
-- Camera and microphone off
-- No "Start Meeting" button (lobby bypassed)
-- You go straight into the meeting
+- **Transport security**: all student traffic is HTTPS with per-session server certificates signed by a local CA. No plain HTTP for student endpoints.
+- **Authentication**: master password hashed with scrypt, session token required for all student API calls. Password expires every 30 days, history prevents reuse.
+- **Encryption at rest**: student index database encrypted with key derived from master password. Each student database encrypted with a unique random key, stored inside the encrypted index.
+- **Meetings database** remains unencrypted (no sensitive personal data).
+- **No internet connection required**: everything runs locally; no data leaves the USB drive.
 
 ---
 
 ## Roadmap
 
-### Phase 1: Meeting Launcher ✅ (Complete)
+### Phase 1: Meeting Launcher (Complete)
 - [x] Vertical weekly calendar
-- [x] Current day on top
-- [x] One-click join with low bandwidth
-- [x] Private & Group classes
-- [x] Countdown tracker (8 lessons)
-- [x] Rate tracking (MMK)
-- [x] Homework & comments fields
-- [x] SQLite database storage
+- [x] One-click Jitsi join with low bandwidth
+- [x] Private & group classes
+- [x] Countdown tracker, rate, homework, comments
+- [x] SQLite storage
 - [x] Edit & delete meetings
-- [x] VS Code dark theme
-- [x] Current meeting (green) and upcoming (yellow) highlighting
+- [x] Dark theme
+- [x] Current/upcoming highlighting
 
-### Phase 2: Client Management (Next)
-- [ ] Individual client profiles (SQLite files)
-- [ ] Client list view
-- [ ] Link clients to meetings
-- [ ] Client notes and history
+### Phase 2: Client Management (In Progress)
+- [x] Encrypted per-student databases
+- [x] Master password + SSL authentication
+- [x] Student list view with search and filters
+- [x] Full student profile (contact, meetings, goals, comments)
+- [x] Attendance logging
+- [x] Payment records (manual, receipt BLOB ready)
+- [x] Global action items
+- [ ] Link students to existing meetings
+- [ ] Attendance marking from meeting view
+- [ ] Payment receipt OCR
+- [ ] Teacher availability / booking
 
 ### Phase 3: Telegram Bot
 - [ ] Deploy bot to Render (free tier)
@@ -267,93 +230,51 @@ This ensures:
 - [ ] Scheduling assistance
 
 ### Phase 4: Analytics
-- [ ] Attendance tracking
-- [ ] Revenue reports
-- [ ] Class summaries
+- [ ] Attendance reports
+- [ ] Revenue summaries
 - [ ] Export to CSV/PDF
 
 ### Phase 5: Scripts & Automation
-- [ ] FAQs database
+- [ ] FAQ database
 - [ ] Funnels and templates
 - [ ] Automated reminders
-- [ ] Client communication
-
----
-
-## Privacy & Security
-
-- **Data stays on your thumb drive** – never leaves your control
-- **SQLite databases** – secure, not plain text
-- **No credit card required** – completely free
-- **No tracking or analytics** – built-in privacy
-- **Open source** – inspect everything
-- **Brave browser** – enhanced privacy
 
 ---
 
 ## Cost Breakdown
 
-| Component | Cost |
-|-----------|------|
-| Meeting launcher | $0 |
-| SQLite database | $0 |
-| Brave browser | $0 |
-| Git & GitHub | $0 |
-| Python server | $0 |
-| Render hosting (future) | $0 (free tier) |
-| **Total** | **$0** |
+| Component         | Cost |
+|-------------------|------|
+| Meeting Launcher  | $0   |
+| Student Manager   | $0   |
+| SQLite/SQLCipher  | $0   |
+| Brave Browser     | $0   |
+| Python & libraries| $0   |
+| Git & GitHub      | $0   |
+| Render (future)   | $0   |
+| **Total**         | $0   |
 
 ---
 
 ## Git Workflow
 
 ```bash
-# Check status
+# See status
 git status
 
-# Add changes
-git add .
+# Stage all changes
+git add -A
 
-# Commit changes
-git commit -m "Description of changes"
+# Commit
+git commit -m "Description"
 
-# View history
-git log --oneline
+# Push to GitHub
+git push origin main
 ```
 
 ---
 
 ## License
 
-Open Source – Use freely, modify as needed.
-
----
-
-## Contributing
-
-This is a personal project but open to feedback. Submit issues or suggestions via GitHub.
-
----
-
-*Built for teachers with limited internet connectivity in Myanmar*
+*Built for teachers in Myanmar with limited internet connectivity.*
 ```
-
----
-
-## ✅ Summary of Changes
-
-| Section | What Was Updated |
-|---------|------------------|
-| **Current Features** | Now accurately reflects actual features (vertical calendar, SQLite, current/upcoming highlighting, etc.) |
-| **Tech Stack** | Added Python + SQLite as current components |
-| **Project Structure** | Updated to match actual folder structure |
-| **How It Works** | Complete rewrite with actual workflow |
-| **Data Storage** | Now reflects SQLite, future student/scripts/analytics folders |
-| **Jitsi Settings** | Updated to working parameters (`prejoinConfig.enabled=false`) |
-| **Roadmap** | Marked Phase 1 as complete |
-| **Git Workflow** | Added basic Git commands |
-| **Installation** | Updated to use `python3 main.py` |
-
----
-
-**Save this as `README.md` and replace your current one.**

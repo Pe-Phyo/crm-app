@@ -47,6 +47,59 @@ form label { display: block; margin-top: 10px; font-size: 14px; color: #94a3b8; 
 form input, form select, form textarea { width: 100%; padding: 8px; margin-top: 4px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #e2e8f0; }
 form textarea { resize: vertical; }
 
+.form-section {
+    border: 1px solid #475569;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    background: #0f172a;
+}
+.form-section legend {
+    font-weight: bold;
+    color: #e2e8f0;
+    padding: 0 10px;
+}
+
+/* Multi-input rows (phones, emails, etc.) */
+.multi-input-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.multi-input-row input {
+    flex: 1;
+}
+.add-multi-btn, .remove-multi-btn {
+    background: #475569;
+    border: none;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-size: 14px;
+}
+.remove-multi-btn {
+    background: #ef4444;
+}
+
+/* Linked student rows */
+.link-student-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+}
+.linked-student-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1e293b;
+    padding: 5px 10px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
 .meeting-time-inputs { display: flex; gap: 5px; align-items: center; margin-top: 5px; }
 .meeting-time-item { display: flex; justify-content: space-between; background: #0f172a; padding: 5px; border-radius: 4px; margin: 3px 0; }
 .remove-mt-btn { background: none; border: none; color: #ef4444; cursor: pointer; }

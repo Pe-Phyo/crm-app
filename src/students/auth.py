@@ -128,3 +128,13 @@ def change_password(data_dir: str, old_password: str, new_password: str) -> bool
         return True
     finally:
         close_index_db(conn)
+
+def verify_master_password(data_dir: str, password: str) -> bool:
+    """Return True if the password matches the master password."""
+    try:
+        from .index_db import open_index_db, close_index_db
+        conn = open_index_db(data_dir, password)
+        close_index_db(conn)
+        return True
+    except Exception:
+        return False        

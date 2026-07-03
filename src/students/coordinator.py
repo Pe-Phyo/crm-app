@@ -36,7 +36,6 @@ class StudentCoordinator:
             return {'error': f'Cannot open index: {str(e)}'}, 500
 
         try:
-            # Routing
             if path == '/students' and method == 'GET':
                 return self._list_students(conn)
             if path == '/students' and method == 'POST':
@@ -47,10 +46,10 @@ class StudentCoordinator:
                 if len(parts) == 3:
                     if method == 'GET':
                         return self._get_student(conn, student_uuid)
-                    elif method == 'PUT':
+                    if method == 'PUT':
                         return self._update_student(conn, student_uuid, body)
-                    elif method == 'DELETE':
-                        return self._delete_student(conn, student_uuid)
+                    if method == 'DELETE':
+                        return self._delete_student(conn, student_uuid, body)
                 elif len(parts) == 4 and parts[3] == 'attendance':
                     if method == 'GET':
                         return self._get_attendance(conn, student_uuid)
@@ -60,13 +59,13 @@ class StudentCoordinator:
                     log_id = int(parts[4])
                     if method == 'PUT':
                         return self._update_attendance(conn, student_uuid, log_id, body)
-                    elif method == 'DELETE':
+                    if method == 'DELETE':
                         return self._delete_attendance(conn, student_uuid, log_id)
                 elif len(parts) == 4 and parts[3] == 'payments':
                     if method == 'GET':
                         return self._get_payments(conn, student_uuid)
                     if method == 'POST':
-                        return self._add_payment(conn, student_uuid, body)  # multipart later
+                        return self._add_payment(conn, student_uuid, body)
             if path == '/actions' and method == 'GET':
                 return self._list_actions(conn)
             if path == '/actions' and method == 'POST':
@@ -76,14 +75,20 @@ class StudentCoordinator:
                 action_id = int(parts[2])
                 if method == 'PUT':
                     return self._update_action(conn, action_id, body)
-                elif method == 'DELETE':
+                if method == 'DELETE':
                     return self._delete_action(conn, action_id)
             return {'error': 'Not found'}, 404
         finally:
             index.close_index_db(conn)
 
-    # Auth handlers
+    # ---- Auth ----
+    def _status(self):
+        index_db_path = os.path.join(self.data_dir, 'index.db')
+        return {'setup': os.path.exists(index_db_path)}, 200
+
     def _setup(self, body: str) -> Tuple[Any, int]:
+        if os.path.exists(os.path.join(self.data_dir, 'index.db')):
+            return {'error': 'Already set up'}, 400
         data = _parse_body(body)
         password = data.get('password', '')
         if len(password) < 6:
@@ -99,53 +104,44 @@ class StudentCoordinator:
             return {'error': 'Invalid password'}, 401
         return {'token': token}, 200
 
-    def _status(self):
-        import os
-        index_db_path = os.path.join(self.data_dir, 'index.db')
-        if os.path.exists(index_db_path):
-            return {'setup': True}, 200
-        return {'setup': False}, 200
-
-    # Student list
+    # ---- Student CRUD ----
     def _list_students(self, conn) -> Tuple[Any, int]:
         students = index.get_all_students(conn)
         return students, 200
 
     def _create_student(self, conn, body: str) -> Tuple[Any, int]:
         data = _parse_body(body)
-        # Generate UUID
         new_uuid = uuid.uuid4().hex
-        # Create per-student DB
         student_db_dir = os.path.join(self.data_dir, 'students')
         key = student.create_student_db(student_db_dir, new_uuid)
-        # Build profile from data
+
         profile = {
             'uuid': new_uuid,
             'name': data.get('name', ''),
-            'location': data.get('location', ''),
+            'location': '',   # not used currently, but keep for schema
             'timezone': data.get('timezone', ''),
-            'age_group': data.get('age_group', ''),
+            'age_group': data.get('age_group', 'Adult'),
             'academic_year': data.get('academic_year', ''),
-            'phone': data.get('phone', ''),
             'telegram': data.get('telegram', ''),
-            'email': data.get('email', ''),
             'is_minor': data.get('is_minor', False),
             'parent_name': data.get('parent_name', ''),
-            'parent_phone': data.get('parent_phone', ''),
+            'school_name': data.get('school_name', ''),
             'educational_goals': data.get('educational_goals', ''),
-            'behavioral_comments': data.get('behavioral_comments', ''),
+            'behavioral_comments': '',
             'general_comments': data.get('general_comments', ''),
             'rate': data.get('rate', 0)
         }
-        # Also handle meeting times if provided in data
+
+        # Meeting times
         meeting_times = data.get('meeting_times', [])
-        # Add summary to index
         summary = ', '.join([f"{mt['day'][:3]} {mt['time']} ({'Group' if mt.get('type')=='group' else 'Private'})" for mt in meeting_times])
+
+        # Index entry
         index.add_student_summary(
             conn,
             uuid=new_uuid,
             name=profile['name'],
-            location=profile['location'],
+            location='',
             rate=profile['rate'],
             last_payment_date='',
             attendance_percentage=0.0,
@@ -153,13 +149,20 @@ class StudentCoordinator:
             status='active',
             db_key=key
         )
-        # Open student DB and save profile + meeting times
+
+        # Per‑student DB population
         student_conn = student.open_student_db(student_db_dir, new_uuid, key)
         try:
             student.save_profile(student_conn, profile)
+            student.set_phones(student_conn, data.get('phones', []))
+            student.set_emails(student_conn, data.get('emails', []))
+            student.set_parent_phones(student_conn, data.get('parent_phones', []))
+            student.set_parent_emails(student_conn, data.get('parent_emails', []))
+            student.set_relationships(student_conn, data.get('linked_students', []))
             for mt in meeting_times:
                 student.add_meeting_time(
                     student_conn,
+                    name=mt.get('name', 'Unnamed'),
                     day=mt.get('day', 'Monday'),
                     time=mt.get('time', '09:00'),
                     mtype=mt.get('type', 'private'),
@@ -169,10 +172,10 @@ class StudentCoordinator:
             student_conn.commit()
         finally:
             student_conn.close()
+
         return {'uuid': new_uuid}, 201
 
     def _get_student(self, conn, uuid: str) -> Tuple[Any, int]:
-        # Get key from index
         key = index.get_student_db_key(conn, uuid)
         if not key:
             return {'error': 'Student not found'}, 404
@@ -180,11 +183,17 @@ class StudentCoordinator:
         student_conn = student.open_student_db(student_db_dir, uuid, key)
         try:
             profile = student.get_profile(student_conn)
+            profile['phones'] = student.get_phones(student_conn)
+            profile['emails'] = student.get_emails(student_conn)
+            profile['parent_phones'] = student.get_parent_phones(student_conn)
+            profile['parent_emails'] = student.get_parent_emails(student_conn)
+            profile['relationships'] = student.get_relationships(student_conn)
             profile['meeting_times'] = student.get_meeting_times(student_conn)
             profile['attendance'] = student.get_attendance(student_conn)
             profile['payments'] = student.get_payments(student_conn)
             profile['homework_reading'] = student.get_homework_reading(student_conn)
             profile['attendance_percentage'] = student.get_attendance_percentage(student_conn)
+            profile['meeting_times_summary'] = student.get_meeting_times_summary(student_conn)
         finally:
             student_conn.close()
         return profile, 200
@@ -197,166 +206,166 @@ class StudentCoordinator:
         student_db_dir = os.path.join(self.data_dir, 'students')
         student_conn = student.open_student_db(student_db_dir, uuid, key)
         try:
-            # Update profile fields
             profile = student.get_profile(student_conn)
-            for field in profile.keys():
+            # Update scalar fields
+            for field in ['name', 'timezone', 'age_group', 'academic_year', 'telegram',
+                          'parent_name', 'school_name', 'educational_goals', 'general_comments', 'rate',
+                          'is_minor']:
                 if field in data:
                     profile[field] = data[field]
             student.save_profile(student_conn, profile)
-            # Update meeting times if provided
+
+            # Update multi‑value fields if present
+            if 'phones' in data:
+                student.set_phones(student_conn, data['phones'])
+            if 'emails' in data:
+                student.set_emails(student_conn, data['emails'])
+            if 'parent_phones' in data:
+                student.set_parent_phones(student_conn, data['parent_phones'])
+            if 'parent_emails' in data:
+                student.set_parent_emails(student_conn, data['parent_emails'])
+            if 'linked_students' in data:
+                student.set_relationships(student_conn, data['linked_students'])
+
             if 'meeting_times' in data:
-                # Replace all meeting times
                 student_conn.execute("DELETE FROM meeting_times")
                 for mt in data['meeting_times']:
                     student.add_meeting_time(
                         student_conn,
+                    name=mt.get('name', 'Unnamed'),
                         day=mt.get('day', 'Monday'),
                         time=mt.get('time', '09:00'),
                         mtype=mt.get('type', 'private'),
                         is_in_person=mt.get('is_in_person', False),
                         meeting_id=mt.get('meeting_id')
                     )
-                # Update summary in index
                 summary = student.get_meeting_times_summary(student_conn)
                 index.update_student_summary(conn, uuid, meeting_times_summary=summary)
-            # Update rate if changed
+
             if 'rate' in data:
                 index.update_student_summary(conn, uuid, rate=data['rate'])
-            # Update name/location
             if 'name' in data:
                 index.update_student_summary(conn, uuid, name=data['name'])
-            if 'location' in data:
-                index.update_student_summary(conn, uuid, location=data['location'])
+
             student_conn.commit()
         finally:
             student_conn.close()
         return {'success': True}, 200
 
-    def _delete_student(self, conn, uuid: str) -> Tuple[Any, int]:
+    def _delete_student(self, conn, uuid: str, body: str = None) -> Tuple[Any, int]:
+        data = _parse_body(body)
+        password = data.get('password', '')
+        if not password:
+            return {'error': 'Password required'}, 400
+        if not auth_module.verify_master_password(self.data_dir, password):
+            return {'error': 'Invalid password'}, 403
         key = index.get_student_db_key(conn, uuid)
         if not key:
             return {'error': 'Student not found'}, 404
-        # Delete the per-student DB file
         student_db_dir = os.path.join(self.data_dir, 'students')
         db_path = os.path.join(student_db_dir, f"{uuid}.sqlite")
         if os.path.exists(db_path):
             os.remove(db_path)
-        # Remove from index
         index.delete_student_summary(conn, uuid)
         return {'success': True}, 200
 
-    # Attendance
-    def _get_attendance(self, conn, uuid: str) -> Tuple[Any, int]:
+    # ---- Attendance, Payments, Actions (unchanged) ----
+    def _get_attendance(self, conn, uuid):
         key = index.get_student_db_key(conn, uuid)
         if not key: return {'error': 'Student not found'}, 404
-        student_db_dir = os.path.join(self.data_dir, 'students')
-        student_conn = student.open_student_db(student_db_dir, uuid, key)
+        sconn = student.open_student_db(os.path.join(self.data_dir, 'students'), uuid, key)
         try:
-            attendance = student.get_attendance(student_conn)
+            return student.get_attendance(sconn), 200
         finally:
-            student_conn.close()
-        return attendance, 200
+            sconn.close()
 
-    def _add_attendance(self, conn, uuid: str, body: str) -> Tuple[Any, int]:
+    def _add_attendance(self, conn, uuid, body):
         key = index.get_student_db_key(conn, uuid)
         if not key: return {'error': 'Student not found'}, 404
         data = _parse_body(body)
         meeting_id = data.get('meeting_id', '')
         date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
         status = data.get('status', 'absent')
-        student_db_dir = os.path.join(self.data_dir, 'students')
-        student_conn = student.open_student_db(student_db_dir, uuid, key)
+        sconn = student.open_student_db(os.path.join(self.data_dir, 'students'), uuid, key)
         try:
-            log_id = student.add_attendance(student_conn, meeting_id, date, status)
-            # Update attendance percentage in index
-            pct = student.get_attendance_percentage(student_conn)
+            log_id = student.add_attendance(sconn, meeting_id, date, status)
+            pct = student.get_attendance_percentage(sconn)
             index.update_student_summary(conn, uuid, attendance_percentage=pct)
-            student_conn.commit()
+            sconn.commit()
+            return {'id': log_id}, 201
         finally:
-            student_conn.close()
-        return {'id': log_id}, 201
+            sconn.close()
 
-    def _update_attendance(self, conn, uuid: str, log_id: int, body: str) -> Tuple[Any, int]:
+    def _update_attendance(self, conn, uuid, log_id, body):
         key = index.get_student_db_key(conn, uuid)
         if not key: return {'error': 'Student not found'}, 404
         data = _parse_body(body)
         status = data.get('status')
-        if not status:
-            return {'error': 'status required'}, 400
-        student_db_dir = os.path.join(self.data_dir, 'students')
-        student_conn = student.open_student_db(student_db_dir, uuid, key)
+        if not status: return {'error': 'status required'}, 400
+        sconn = student.open_student_db(os.path.join(self.data_dir, 'students'), uuid, key)
         try:
-            student.update_attendance(student_conn, log_id, status)
-            pct = student.get_attendance_percentage(student_conn)
+            student.update_attendance(sconn, log_id, status)
+            pct = student.get_attendance_percentage(sconn)
             index.update_student_summary(conn, uuid, attendance_percentage=pct)
-            student_conn.commit()
+            sconn.commit()
+            return {'success': True}, 200
         finally:
-            student_conn.close()
-        return {'success': True}, 200
+            sconn.close()
 
-    def _delete_attendance(self, conn, uuid: str, log_id: int) -> Tuple[Any, int]:
+    def _delete_attendance(self, conn, uuid, log_id):
         key = index.get_student_db_key(conn, uuid)
         if not key: return {'error': 'Student not found'}, 404
-        student_db_dir = os.path.join(self.data_dir, 'students')
-        student_conn = student.open_student_db(student_db_dir, uuid, key)
+        sconn = student.open_student_db(os.path.join(self.data_dir, 'students'), uuid, key)
         try:
-            student.delete_attendance(student_conn, log_id)
-            pct = student.get_attendance_percentage(student_conn)
+            student.delete_attendance(sconn, log_id)
+            pct = student.get_attendance_percentage(sconn)
             index.update_student_summary(conn, uuid, attendance_percentage=pct)
-            student_conn.commit()
+            sconn.commit()
+            return {'success': True}, 200
         finally:
-            student_conn.close()
-        return {'success': True}, 200
+            sconn.close()
 
-    # Payments
-    def _get_payments(self, conn, uuid: str) -> Tuple[Any, int]:
+    def _get_payments(self, conn, uuid):
         key = index.get_student_db_key(conn, uuid)
         if not key: return {'error': 'Student not found'}, 404
-        student_db_dir = os.path.join(self.data_dir, 'students')
-        student_conn = student.open_student_db(student_db_dir, uuid, key)
+        sconn = student.open_student_db(os.path.join(self.data_dir, 'students'), uuid, key)
         try:
-            payments = student.get_payments(student_conn)
+            return student.get_payments(sconn), 200
         finally:
-            student_conn.close()
-        return payments, 200
+            sconn.close()
 
-    def _add_payment(self, conn, uuid: str, body: str) -> Tuple[Any, int]:
+    def _add_payment(self, conn, uuid, body):
         key = index.get_student_db_key(conn, uuid)
         if not key: return {'error': 'Student not found'}, 404
         data = _parse_body(body)
         date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
         amount = data.get('amount', 0)
-        # receipt_image is not handled here; we'll support multipart later
-        student_db_dir = os.path.join(self.data_dir, 'students')
-        student_conn = student.open_student_db(student_db_dir, uuid, key)
+        sconn = student.open_student_db(os.path.join(self.data_dir, 'students'), uuid, key)
         try:
-            payment_id = student.add_payment(student_conn, date, amount, None)
-            # Update last_payment_date in index
+            pid = student.add_payment(sconn, date, amount, None)
             index.update_student_summary(conn, uuid, last_payment_date=date)
-            student_conn.commit()
+            sconn.commit()
+            return {'id': pid}, 201
         finally:
-            student_conn.close()
-        return {'id': payment_id}, 201
+            sconn.close()
 
-    # Action items
-    def _list_actions(self, conn) -> Tuple[Any, int]:
-        items = index.get_action_items(conn)
-        return items, 200
+    # ---- Actions ----
+    def _list_actions(self, conn):
+        return index.get_action_items(conn), 200
 
-    def _add_action(self, conn, body: str) -> Tuple[Any, int]:
+    def _add_action(self, conn, body):
         data = _parse_body(body)
         text = data.get('text', '')
-        if not text:
-            return {'error': 'text required'}, 400
+        if not text: return {'error': 'text required'}, 400
         id = index.add_action_item(conn, text)
         return {'id': id}, 201
 
-    def _update_action(self, conn, action_id: int, body: str) -> Tuple[Any, int]:
+    def _update_action(self, conn, action_id, body):
         data = _parse_body(body)
         index.update_action_item(conn, action_id, text=data.get('text'), done=data.get('done'))
         return {'success': True}, 200
 
-    def _delete_action(self, conn, action_id: int) -> Tuple[Any, int]:
+    def _delete_action(self, conn, action_id):
         index.delete_action_item(conn, action_id)
         return {'success': True}, 200
 

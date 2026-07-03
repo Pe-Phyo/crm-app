@@ -17,3 +17,6 @@ Thumbs.db
 
 # VS Code
 .vscode/
+
+libs/
+data/utils/timezone_data.json

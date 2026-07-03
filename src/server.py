@@ -1,3 +1,4 @@
+import json
 import os
 import ssl
 import threading
@@ -113,14 +114,29 @@ class RequestHandler(SimpleHTTPRequestHandler):
         # Meetings API
         if path.startswith('/api/meetings'):
             return meetings_coordinator.handle(method, path, body)
+
+        # Location data (timezone list)
+        if path == '/api/locations':
+            if method == 'GET':
+                return self._get_locations()
+
         # Student API
         if path.startswith('/api/auth') or path.startswith('/api/students') or path.startswith('/api/actions'):
             if self.student_coordinator:
-                # Student coordinator expects paths without /api prefix
                 rel_path = path[len('/api'):]
                 headers = {k: v for k, v in self.headers.items()}
                 return self.student_coordinator.handle(method, rel_path, body, headers)
+
         return {'error': 'Not found'}, 404
+
+    def _get_locations(self):
+        import json, os
+        loc_file = os.path.join(DATA_DIR, 'utils', 'timezone_data.json')
+        if not os.path.exists(loc_file):
+            return {'error': 'Location data missing'}, 500
+        with open(loc_file, 'r') as f:
+            data = json.load(f)
+        return {'locations': data.get('locations', [])}, 200
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -155,7 +171,9 @@ class RequestHandler(SimpleHTTPRequestHandler):
     def do_DELETE(self):
         parsed = urlparse(self.path)
         if parsed.path.startswith('/api/'):
-            data, status = self._route_api('DELETE', parsed.path, None)
+            cl = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(cl).decode() if cl > 0 else None
+            data, status = self._route_api('DELETE', parsed.path, body)
             self._send_json(data, status)
             return
         self.send_response(404)

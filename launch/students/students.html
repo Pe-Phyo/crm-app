@@ -8,13 +8,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🧑‍🎓 Students</h1>
+            <h1>Students</h1>
             <div>
-                <button id="backBtn" class="btn btn-secondary">← Back</button>
+                <button id="backBtn" class="btn btn-secondary">Back</button>
             </div>
         </div>
 
-        <!-- Setup / Login screens -->
+        <!-- Setup / Login screens (unchanged) -->
         <div id="setupScreen" class="login-box" style="display:none;">
             <h2>Set Master Password</h2>
             <p style="color:#94a3b8;font-size:14px;">This password protects all student data. Cannot be recovered.</p>
@@ -32,7 +32,6 @@
 
         <!-- Main dashboard -->
         <div id="mainPanel" style="display:none;">
-            <!-- Search & Filters -->
             <div class="filter-bar">
                 <input type="text" id="searchInput" placeholder="Search by name...">
                 <select id="statusFilter">
@@ -54,7 +53,7 @@
                 <div class="main-panel">
                     <div class="panel-header">
                         <h3>Active Students</h3>
-                        <button id="addStudentBtn" class="btn btn-primary">➕ Add Student</button>
+                        <button id="addStudentBtn" class="btn btn-primary">+ Add Student</button>
                     </div>
                     <div id="studentList"></div>
                 </div>
@@ -75,84 +74,154 @@
                 <h2 id="modalTitle">Add Student</h2>
                 <form id="studentForm">
                     <input type="hidden" id="studentUuid">
-                    <label>Name *</label>
-                    <input type="text" name="name" required>
 
-                    <label>Location</label>
-                    <input type="text" name="location">
+                    <!-- Section 1+2: Profile & Contacts -->
+                    <fieldset class="form-section">
+                        <legend>Profile</legend>
+                        <label>Full Name *</label>
+                        <input type="text" name="name" required>
 
-                    <label>Timezone</label>
-                    <input type="text" name="timezone" value="Asia/Yangon">
+                        <label>Age Group *</label>
+                        <select name="age_group" id="ageGroupSelect">
+                            <option value="Adult">Adult</option>
+                            <option value="Young Adult">Young Adult</option>
+                            <option value="Child">Child</option>
+                        </select>
 
-                    <label>Age Group</label>
-                    <select name="age_group">
-                        <option>Child</option>
-                        <option>Young Adult</option>
-                        <option selected>Adult</option>
-                    </select>
+                        <label>Location / Timezone</label>
+                        <select name="timezone" id="timezoneSelect">
+                            <option value="">-- Select --</option>
+                        </select>
 
-                    <label>Academic Year</label>
-                    <input type="text" name="academic_year">
+                        <label>Phone Numbers</label>
+                        <div id="phoneNumbersContainer">
+                            <div class="multi-input-row">
+                                <input type="text" class="phone-input" placeholder="+95 9 123 456 789">
+                                <button type="button" class="add-multi-btn">+</button>
+                            </div>
+                        </div>
 
-                    <label>Phone</label>
-                    <input type="text" name="phone">
+                        <label>Email Addresses</label>
+                        <div id="emailsContainer">
+                            <div class="multi-input-row">
+                                <input type="email" class="email-input" placeholder="student@example.com">
+                                <button type="button" class="add-multi-btn">+</button>
+                            </div>
+                        </div>
 
-                    <label>Telegram</label>
-                    <input type="text" name="telegram">
+                        <label>Telegram</label>
+                        <input type="text" name="telegram" placeholder="@username">
+                    </fieldset>
 
-                    <label>Email</label>
-                    <input type="email" name="email">
-
-                    <label>Rate (MMK) *</label>
-                    <input type="number" name="rate" required>
-
-                    <label>
-                        <input type="checkbox" name="is_minor" id="isMinorCheckbox"> Minor
-                    </label>
-                    <div id="minorFields" style="display:none;">
-                        <label>Parent Name</label>
+                    <!-- 2a: Minor Info (hidden by default) -->
+                    <fieldset class="form-section" id="minorInfoSection" style="display:none;">
+                        <legend>Guardian & School</legend>
+                        <label>Parent/Guardian Name *</label>
                         <input type="text" name="parent_name">
+
                         <label>Parent Phone</label>
-                        <input type="text" name="parent_phone">
-                    </div>
+                        <div id="parentPhonesContainer">
+                            <div class="multi-input-row">
+                                <input type="text" class="parent-phone-input" placeholder="+95 9 987 654 321">
+                                <button type="button" class="add-multi-btn">+</button>
+                            </div>
+                        </div>
 
-                    <label>Educational Goals</label>
-                    <textarea name="educational_goals" rows="2"></textarea>
+                        <label>Parent Email</label>
+                        <div id="parentEmailsContainer">
+                            <div class="multi-input-row">
+                                <input type="email" class="parent-email-input" placeholder="parent@example.com">
+                                <button type="button" class="add-multi-btn">+</button>
+                            </div>
+                        </div>
 
-                    <label>Behavioral Comments</label>
-                    <textarea name="behavioral_comments" rows="2"></textarea>
+                        <label>School Name</label>
+                        <input type="text" name="school_name">
 
-                    <label>General Comments</label>
-                    <textarea name="general_comments" rows="2"></textarea>
+                        <label>Grade / Academic Year</label>
+                        <input type="text" name="academic_year">
+                    </fieldset>
 
-                    <!-- Meeting Times Sub-form -->
-                    <fieldset style="border:1px solid #475569;padding:10px;border-radius:8px;margin-top:15px;">
+                    <!-- 2b: Linked Students -->
+                    <fieldset class="form-section">
+                        <legend>Linked Students (Family/Siblings)</legend>
+                        <div id="linkedStudentsList"></div>
+                        <div class="link-student-row">
+                            <select id="linkStudentSelect">
+                                <option value="">-- Select student --</option>
+                            </select>
+                            <select id="relationshipType">
+                                <option value="Parent">Parent</option>
+                                <option value="Child">Child</option>
+                                <option value="Sibling">Sibling</option>
+                                <option value="Spouse">Spouse</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <label style="display:flex;align-items:center;font-size:12px;">
+                                <input type="checkbox" id="invoiceGroupCheck"> Group for invoicing
+                            </label>
+                            <button type="button" id="addLinkBtn" class="btn btn-secondary">Link</button>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 3: Rate -->
+                    <fieldset class="form-section">
+                        <legend>Rate</legend>
+                        <label>Rate per lesson (MMK) *</label>
+                        <input type="number" name="rate" required>
+                    </fieldset>
+
+                    <!-- Section 4: Meeting Times (mirrors meeting add modal) -->
+                    <fieldset class="form-section">
                         <legend>Meeting Times</legend>
                         <div id="meetingTimesList"></div>
-                        <div class="meeting-time-inputs">
-                            <select id="meetingDay">
-                                <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-                                <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
-                            </select>
-                            <input type="time" id="meetingTime" value="09:00">
-                            <select id="meetingType">
-                                <option value="private">Private</option>
-                                <option value="group">Group</option>
-                            </select>
-                            <label><input type="checkbox" id="meetingInPerson"> In‑person</label>
-                            <button type="button" id="addMeetingBtn" class="btn btn-secondary">+ Add</button>
-                        </div>
+
+                        <label>Meeting Name</label>
+                        <input type="text" id="meetingName" placeholder="e.g., Math Group A">
+
+                        <label>Day</label>
+                        <select id="meetingDay">
+                            <option>Sunday</option><option>Monday</option><option>Tuesday</option>
+                            <option>Wednesday</option><option>Thursday</option><option>Friday</option>
+                            <option>Saturday</option>
+                        </select>
+
+                        <label>Time</label>
+                        <input type="time" id="meetingTime" value="09:00">
+
+                        <label>Type</label>
+                        <select id="meetingType">
+                            <option value="private">Private</option>
+                            <option value="group">Group</option>
+                        </select>
+
+                        <label>In‑person</label>
+                        <input type="checkbox" id="meetingInPerson" style="width:auto;">
+
+                        <label>Meeting Link</label>
+                        <input type="text" id="meetingLink" placeholder="Will auto‑fill based on name" style="margin-bottom:10px;">
+
+                        <button type="button" id="addMeetingBtn" class="btn btn-primary">+ Add Meeting</button>
+                    </fieldset>
+
+                    <!-- Section 6: Goals & Notes -->
+                    <fieldset class="form-section">
+                        <legend>Goals & Notes</legend>
+                        <label>Educational Goals</label>
+                        <textarea name="educational_goals" rows="3"></textarea>
+                        <label>General Comments</label>
+                        <textarea name="general_comments" rows="3"></textarea>
                     </fieldset>
 
                     <div class="modal-actions" style="margin-top:20px;">
                         <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
-                        <button type="submit" class="btn btn-success">Save</button>
+                        <button type="submit" class="btn btn-success">Save Student</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Student Detail Modal -->
+        <!-- Student Detail Modal (unchanged for now) -->
         <div class="modal-overlay" id="detailModal">
             <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto;">
                 <div id="detailContent"></div>
