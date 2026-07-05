@@ -7,14 +7,20 @@ from typing import Tuple, Any
 from . import auth as auth_module
 from . import index_db as index
 from . import student_db as student
+from ..staff import auth as staff_auth
 
 # ------------------------------------------------------------
 class StudentCoordinator:
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: str, master_key: bytes = None, root_data_dir: str = None):
         self.data_dir = data_dir
+        self.master_key = master_key
+        self.root_data_dir = root_data_dir if root_data_dir else data_dir
 
     def handle(self, method: str, path: str, body: str = None, headers: dict = None) -> Tuple[Any, int]:
         token = (headers or {}).get('Authorization', '').replace('Bearer ', '')
+        # Accept either student token (legacy) or staff token
+        if not auth_module.verify_token(token) and not staff_auth.verify_session(token):
+            return {'error': 'Unauthorized'}, 401
         # Routes without auth
         if path == '/auth/status' and method == 'GET':
             return self._status()
@@ -22,16 +28,10 @@ class StudentCoordinator:
             return self._setup(body)
         if path == '/auth/login' and method == 'POST':
             return self._login(body)
-        # Auth required
-        if not auth_module.verify_token(token):
-            return {'error': 'Unauthorized'}, 401
-        key = auth_module.get_session_key(token)
-        if key is None:
-            return {'error': 'Session expired'}, 401
 
         # Open index DB
         try:
-            conn = index.open_index_db_with_key(self.data_dir, key)
+            conn = index.open_index_db_with_key(self.data_dir, self.master_key)
         except Exception as e:
             return {'error': f'Cannot open index: {str(e)}'}, 500
 
@@ -93,13 +93,16 @@ class StudentCoordinator:
         password = data.get('password', '')
         if len(password) < 6:
             return {'error': 'Password too short'}, 400
-        auth_module.setup_master_password(self.data_dir, password)
-        return {'success': True}, 200
+        try:
+            auth_module.setup_master_password(self.data_dir, password, root_data_dir=self.root_data_dir)
+            return {'success': True}, 200
+        except ValueError as e:
+            return {'error': str(e)}, 400
 
     def _login(self, body: str) -> Tuple[Any, int]:
         data = _parse_body(body)
         password = data.get('password', '')
-        token = auth_module.login(self.data_dir, password)
+        token = auth_module.login(self.root_data_dir, password)
         if token is None:
             return {'error': 'Invalid password'}, 401
         return {'token': token}, 200
@@ -257,7 +260,7 @@ class StudentCoordinator:
         password = data.get('password', '')
         if not password:
             return {'error': 'Password required'}, 400
-        if not auth_module.verify_master_password(self.data_dir, password):
+        if not auth_module.verify_master_password(self.root_data_dir, password):
             return {'error': 'Invalid password'}, 403
         key = index.get_student_db_key(conn, uuid)
         if not key:

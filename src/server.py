@@ -16,6 +16,8 @@ from cryptography.hazmat.backends import default_backend
 
 from .meetings import coordinator as meetings_coordinator
 from .students.coordinator import StudentCoordinator
+from . import crypto_engine
+from .staff.coordinator import StaffCoordinator
 
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # crm-app root
@@ -93,6 +95,7 @@ def generate_ssl_context():
 
 class RequestHandler(SimpleHTTPRequestHandler):
     student_coordinator = None
+    staff_coordinator = None
 
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -119,6 +122,22 @@ class RequestHandler(SimpleHTTPRequestHandler):
         if path == '/api/locations':
             if method == 'GET':
                 return self._get_locations()
+
+        # Staff API
+        if path.startswith('/api/auth/staff'):
+            # Map /api/auth/staff/login → /auth/login, etc.
+            sub = path[len('/api/auth/staff'):]
+            if not sub.startswith('/'):
+                sub = '/' + sub
+            rel_path = '/auth' + sub
+            if self.staff_coordinator:
+                headers = {k: v for k, v in self.headers.items()}
+                return self.staff_coordinator.handle(method, rel_path, body, headers)
+        elif path.startswith('/api/staff'):
+            if self.staff_coordinator:
+                rel_path = path[len('/api'):]
+                headers = {k: v for k, v in self.headers.items()}
+                return self.staff_coordinator.handle(method, rel_path, body, headers)
 
         # Student API
         if path.startswith('/api/auth') or path.startswith('/api/students') or path.startswith('/api/actions'):
@@ -186,16 +205,26 @@ class RequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
-
 def start():
+    # Unlock master encryption key (will prompt in terminal)
+    crypto_engine.unlock(DATA_DIR)
+
     # Init meetings DB
     from .meetings.db import init_db
     init_db()
 
     # Init student coordinator
     os.makedirs(STUDENT_DATA_DIR, exist_ok=True)
-    student_coordinator = StudentCoordinator(STUDENT_DATA_DIR)
+    student_coordinator = StudentCoordinator(
+        STUDENT_DATA_DIR,
+        master_key=crypto_engine.get_master_key(),
+        root_data_dir=DATA_DIR
+    )
     RequestHandler.student_coordinator = student_coordinator
+
+        # Init staff coordinator
+    staff_coordinator = StaffCoordinator(DATA_DIR)
+    RequestHandler.staff_coordinator = staff_coordinator
 
     # SSL context
     ssl_context = generate_ssl_context()

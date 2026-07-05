@@ -1,17 +1,8 @@
 import { CONFIG } from './config.js';
 
-let authToken = null;
-
-export function setToken(token) {
-    authToken = token;
-    localStorage.setItem('student_token', token);
-}
-
+// We now use the staff token from localStorage (set by main dashboard)
 export function getToken() {
-    if (!authToken) {
-        authToken = localStorage.getItem('student_token');
-    }
-    return authToken;
+    return localStorage.getItem('staff_token');
 }
 
 export async function apiCall(method, path, body = null, suppressAuth = false) {
@@ -33,12 +24,6 @@ export async function apiCall(method, path, body = null, suppressAuth = false) {
     if (!res.ok) {
         throw new Error(data.error || 'Request failed');
     }
-    return data;
-}
-
-export async function login(password) {
-    const data = await apiCall('POST', '/auth/login', { password });
-    setToken(data.token);
     return data;
 }
 

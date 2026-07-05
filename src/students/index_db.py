@@ -58,21 +58,12 @@ def open_index_db_with_key(data_dir: str, key: bytes):
     # No password verification needed because we already authenticated.
     return conn
 
-def open_index_db(data_dir: str, password: str) -> Any:
-    """Open the index DB with the given password. Returns a connection."""
-    salt = _read_salt(data_dir)
-    key = _derive_key(password, salt)
-    db_path = os.path.join(data_dir, DB_FILE)
-    conn = open_encrypted_db(db_path, key)
-    # Verify that the password matches the stored hash (belt and suspenders)
-    cursor = conn.execute("SELECT salt, hash FROM auth LIMIT 1")
-    row = cursor.fetchone()
-    if row is None:
-        raise ValueError("Auth record missing")
-    stored_salt, stored_hash = row
-    if not verify_password(password, stored_salt, stored_hash):
-        raise ValueError("Incorrect password")
-    return conn
+def open_index_db(data_dir: str, password: str):
+    """Legacy – no longer used directly after MEP split.
+    Just returns the connection using the master key (stored in crypto_engine)."""
+    from .. import crypto_engine
+    key = crypto_engine.get_master_key()
+    return open_index_db_with_key(data_dir, key)
 
 def close_index_db(conn):
     conn.close()
@@ -245,3 +236,18 @@ def update_action_item(conn, item_id: int, text: str = None, done: bool = None):
 def delete_action_item(conn, item_id: int):
     conn.execute("DELETE FROM action_items WHERE id=?", (item_id,))
     conn.commit()
+
+def setup_index_db_with_master_key(data_dir: str, master_key: bytes):
+    """Create the student index database using the already‑generated master key.
+    Stores a dummy auth record (we don't use it for login anymore)."""
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, DB_FILE)
+    conn = create_encrypted_db(db_path, master_key)
+    _create_tables(conn)
+    # Insert a placeholder auth record (not used for verification now)
+    conn.execute(
+        "INSERT INTO auth (salt, hash, last_changed) VALUES (?,?,?)",
+        (b'', b'', datetime.utcnow().isoformat())
+    )
+    conn.commit()
+    conn.close()

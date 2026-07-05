@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Management</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="staff-app">
+        <button onclick="window.location.href='/launch/index.html'">← Dashboard</button>
+        <h2>Staff Management</h2>
+        <div id="admin-panel" style="display:none;">
+            <h3>All Staff</h3>
+            <ul id="staff-list"></ul>
+            <hr>
+            <h4>Create New Staff</h4>
+            <form id="create-staff-form">
+                <input type="text" id="new-username" placeholder="Username" required>
+                <input type="password" id="new-password" placeholder="Password" required>
+                <select id="new-role">
+                    <option value="teacher">Teacher</option>
+                    <option value="front_office">Front Office</option>
+                    <option value="back_office">Back Office</option>
+                    <option value="bot">Bot</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <input type="text" id="new-fullname" placeholder="Full Name">
+                <button type="submit">Create</button>
+            </form>
+            <hr>
+            <h4>Approve Staff</h4>
+            <input type="text" id="approve-uuid" placeholder="Staff UUID">
+            <input type="password" id="approve-mep" placeholder="Master Encryption Password">
+            <button onclick="approveStaff()">Approve</button>
+            <hr>
+            <h4>Delete Staff</h4>
+            <input type="text" id="delete-uuid" placeholder="Staff UUID">
+            <input type="password" id="delete-mep" placeholder="MEP">
+            <button onclick="deleteStaff()">Delete</button>
+        </div>
+        <hr>
+            <h4>Test Roles</h4>
+            <p>Click a button to view the dashboard as that role (without affecting your actual permissions).</p>
+            <button class="btn btn-secondary" onclick="setTestRole('teacher')">Teacher</button>
+            <button class="btn btn-secondary" onclick="setTestRole('front_office')">Front Office</button>
+            <button class="btn btn-secondary" onclick="setTestRole('back_office')">Back Office</button>
+            <button class="btn btn-secondary" onclick="setTestRole('bot')">Bot</button>
+            <button class="btn btn-secondary" onclick="setTestRole('')">Clear Test Role</button>
+        <div id="own-profile" style="display:none;">
+            <h3>My Profile</h3>
+            <form id="profile-form">
+                <label>Full Name: <input type="text" id="full_name"></label><br>
+                <label>Display Name: <input type="text" id="display_name"></label><br>
+                <label>Email: <input type="email" id="email"></label><br>
+                <label>Phone: <input type="text" id="phone"></label><br>
+                <label>Timezone: <input type="text" id="timezone"></label><br>
+                <label>Hourly Rate (MMK): <input type="number" id="hourly_rate"></label><br>
+                <label>Meeting Link Pattern: <input type="text" id="meeting_link_pattern"></label><br>
+                <label>Bio: <textarea id="bio"></textarea></label><br>
+                <button type="submit">Save</button>
+            </form>
+            <hr>
+            <h4>Availability</h4>
+            <div id="availability-editor">
+                <table id="availability-grid">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button id="save-availability-btn" class="btn btn-primary">Save Availability</button>
+                <span id="availability-status"></span>
+            </div>
+            <h4>Holidays</h4>
+            <div id="holidays-editor">
+                <div>
+                    <label>Start: <input type="date" id="holiday-start"></label>
+                    <label>End: <input type="date" id="holiday-end"></label>
+                    <input type="text" id="holiday-desc" placeholder="Description">
+                    <button id="add-holiday-btn" class="btn btn-primary">Add</button>
+                </div>
+                <ul id="holidays-list"></ul>
+                <button id="save-holidays-btn" class="btn btn-primary">Save Holidays</button>
+                <span id="holidays-status"></span>
+            </div>
+            <hr>
+            <h4>Change Password</h4>
+            <input type="password" id="old-pw" placeholder="Old password">
+            <input type="password" id="new-pw" placeholder="New password">
+            <button onclick="changePassword()">Change</button>
+        </div>
+    </div>
+    <script src="js/app.js" type="module"></script>
+</body>
+</html>

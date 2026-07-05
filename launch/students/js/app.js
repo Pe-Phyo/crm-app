@@ -1,9 +1,8 @@
-import { checkSetup, bindAuthEvents } from './auth/auth.js';
+import { getStudents, getActions, addAction, updateAction, deleteAction } from './api.js';
 import { renderStudentList, filterStudents, bindFilterEvents } from './students/list.js';
 import { openAddForm, updateLinkSelect } from './students/addForm.js';
 import { openStudentDetail } from './students/detailView.js';
-import { renderActions } from './actions/actions.js';
-import { getStudents, getActions, addAction, updateAction, deleteAction } from './api.js';
+import { renderActions } from './render.js';
 
 // State
 let currentStudents = [];
@@ -17,7 +16,7 @@ window._onStudentChanged = async () => {
     updateLinkSelect(currentStudents);
 };
 
-// Load data from backend and render
+// Load data and render everything
 async function loadData() {
     currentStudents = await getStudents();
     currentActions = await getActions();
@@ -51,7 +50,35 @@ async function deleteActionHandler(id) {
 }
 
 // Init
-function init() {
+async function init() {
+    // Verify staff token
+    const staffToken = localStorage.getItem('staff_token');
+    if (!staffToken) {
+        // Not logged in – redirect to main dashboard
+        window.location.href = '/launch/index.html';
+        return;
+    }
+
+    // Check that token is still valid
+    try {
+        const res = await fetch('/api/staff/me', {
+            headers: { 'Authorization': `Bearer ${staffToken}` }
+        });
+        if (!res.ok) {
+            localStorage.clear();
+            window.location.href = '/launch/index.html';
+            return;
+        }
+    } catch (e) {
+        localStorage.clear();
+        window.location.href = '/launch/index.html';
+        return;
+    }
+
+    // Token valid – proceed
+    document.getElementById('mainPanel').style.display = 'block';
+
+    // Wire UI
     document.getElementById('backBtn')?.addEventListener('click', () => {
         window.location.href = '/launch/index.html';
     });
@@ -63,11 +90,7 @@ function init() {
         renderStudentList(filtered, openStudentDetail);
     });
 
-    bindAuthEvents(async () => {
-        await loadData();
-    });
-
-    checkSetup();
+    await loadData();
 }
 
 init();

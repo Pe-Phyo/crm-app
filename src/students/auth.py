@@ -1,3 +1,4 @@
+import os
 import secrets
 import time
 from datetime import datetime, timedelta
@@ -14,6 +15,7 @@ from .index_db import (
     is_password_in_history
 )
 from .crypto import hash_password, generate_key
+from .. import crypto_engine as _crypto_engine
 
 # In‑memory session store: token -> { 'created': datetime, 'last_used': datetime }
 _sessions: Dict[str, dict] = {}
@@ -24,37 +26,58 @@ PASSWORD_EXPIRY_DAYS = 30
 # ------------------------------------------------------------
 # Setup
 # ------------------------------------------------------------
-def setup_master_password(data_dir: str, password: str):
-    """First‑time setup: create the index DB with the given password."""
-    setup_index_db(data_dir, password)
+def setup_master_password(data_dir: str, password: str, root_data_dir: str = None):
+    """
+    First‑time setup for the student index DB.
+    If the MEP files already exist in root_data_dir, verify the password
+    and use the existing master key (do NOT regenerate it).
+    If MEP files don't exist, create them (this should only happen at console).
+    Finally, create the student index DB in data_dir using the master key.
+    """
+    if root_data_dir is None:
+        root_data_dir = data_dir
+
+    # Are MEP files already present?
+    mep_salt = os.path.join(root_data_dir, 'master_key.salt')
+    mep_enc  = os.path.join(root_data_dir, 'master_key.enc')
+
+    if os.path.exists(mep_salt) and os.path.exists(mep_enc):
+        # MEP exists – verify password and get the existing master key
+        if not _crypto_engine.verify_mep(root_data_dir, password):
+            raise ValueError("Incorrect master password")
+        # Load the master key into memory (unlock does the full job)
+        # Since unlock already happened at console, the key is in memory.
+        # But we can also just call _crypto_engine.unlock(root_data_dir) again?
+        # Simpler: just use the already‑loaded key from crypto_engine.
+        master_key = _crypto_engine.get_master_key()
+    else:
+        # No MEP yet – create it (this path is for first‑ever setup via browser,
+        # but we intend MEP creation to be console‑only; still handle gracefully)
+        _crypto_engine.setup_mep(root_data_dir, password)
+        master_key = _crypto_engine.get_master_key()
+
+    # Create the student index DB using the master key
+    from .index_db import setup_index_db_with_master_key
+    setup_index_db_with_master_key(data_dir, master_key)
 
 # ------------------------------------------------------------
 # Login
 # ------------------------------------------------------------
 def login(data_dir: str, password: str) -> Optional[str]:
-    try:
-        # Derive key
-        from .index_db import _read_salt, _derive_key
-        salt = _read_salt(data_dir)
-        key = _derive_key(password, salt)
-        conn = open_index_db(data_dir, password)   # also verifies
-        close_index_db(conn)
-    except Exception:
+    if not _crypto_engine.verify_mep(data_dir, password):
         return None
     token = secrets.token_urlsafe(32)
     _sessions[token] = {
-        'key': key,
         'created': datetime.utcnow(),
         'last_used': datetime.utcnow()
     }
     return token
 
 def get_session_key(token: str) -> Optional[bytes]:
-    """Return the derived index DB key for the session, or None."""
+    """Legacy – now we use the global master key. Returns a non‑None value just to pass checks."""
     if verify_token(token):
-        return _sessions[token]['key']
+        return b'valid'   # will not be used; coordinator uses master key directly
     return None
-
 # ------------------------------------------------------------
 # Token verification
 # ------------------------------------------------------------

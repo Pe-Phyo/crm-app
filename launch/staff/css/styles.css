@@ -1,0 +1,25 @@
+#availability-grid {
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+#availability-grid th,
+#availability-grid td {
+    border: 1px solid #475569;
+    padding: 4px 8px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+#availability-grid th {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+#availability-grid td.available {
+    background: #166534;
+    color: #bbf7d0;
+}
+#availability-grid td.pending {
+    background: #854d0e;
+    color: #fef08a;
+}

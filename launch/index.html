@@ -1,25 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRM App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM App – Dashboard</title>
     <style>
-        body { background: #0f172a; color: #e2e8f0; font-family: sans-serif; text-align: center; padding: 50px; }
-        .btn { background: #3b82f6; color: white; border: none; padding: 20px 60px; font-size: 1.5rem; border-radius: 12px; cursor: pointer; text-decoration: none; display: inline-block; margin: 10px; }
-        .btn:hover { background: #2563eb; }
-        .btn span { display: block; font-size: 0.8rem; color: #93c5fd; margin-top: 4px; }
-        .btn-student { background: #10b981; }
-        .btn-student:hover { background: #059669; }
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; text-align: center; background: #1a1a2e; color: #eee; }
+        .button { display: inline-block; padding: 1rem 2rem; margin: 1rem; background: #0f3460; color: white; text-decoration: none; border-radius: 8px; font-size: 1.2rem; }
+        .button:hover { background: #1a1a4e; }
+        #login-form { margin: 2rem 0; }
+        input { padding: 0.5rem; margin: 0.5rem; border-radius: 4px; border: none; }
+        .error { color: #e94560; }
     </style>
 </head>
 <body>
-    <h1>📋 CRM App</h1>
-    <a href="./meetings/meetings.html" class="btn">
-        📅 Launch Meetings
-        <span>One‑click join · Low bandwidth</span>
-    </a>
-    <a href="/students/students.html" class="btn btn-student">
-        🧑‍🎓 Students
-        <span>Secure profiles · Attendance · Payments</span>
-    </a>
+    <h1>CRM App</h1>
+    <div id="login-container">
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Log In</button>
+        </form>
+        <p class="error" id="login-error"></p>
+    </div>
+    <div id="dashboard" style="display:none;">
+        <h2>Welcome, <span id="display-name"></span> (<span id="role-display"></span>)</h2>
+        <a href="/launch/meetings/meetings.html" class="button">Meetings</a>
+        <a href="/launch/students/students.html" class="button">Students</a>
+        <a href="/launch/staff/staff.html" class="button" id="staff-btn" style="display:none;">Staff</a>
+        <button id="logout-btn" class="button" style="background:#555;">Logout</button>
+    </div>
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const dashboard = document.getElementById('dashboard');
+        const loginContainer = document.getElementById('login-container');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            try {
+                const res = await fetch('/api/auth/staff/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                // Store token and role
+                localStorage.setItem('staff_token', data.token);
+                localStorage.setItem('staff_role', data.role);
+                localStorage.setItem('staff_uuid', data.uuid);
+                showDashboard(data.role);
+            } catch (err) {
+                loginError.textContent = err.message;
+            }
+        });
+
+        function showDashboard(role) {
+            loginContainer.style.display = 'none';
+            dashboard.style.display = 'block';
+            document.getElementById('role-display').textContent = role;
+            // Fetch own profile for display name
+            fetch('/api/staff/me', {
+                headers: {'Authorization': `Bearer ${localStorage.getItem('staff_token')}`}
+            })
+            .then(r => r.json())
+            .then(prof => {
+                document.getElementById('display-name').textContent = prof.display_name || prof.username;
+            })
+            .catch(() => {});
+            // Show staff button only for admin (and maybe teacher later)
+            if (role === 'admin') {
+                document.getElementById('staff-btn').style.display = 'inline-block';
+            }
+            // Set token for other pages
+            localStorage.setItem('staff_token', localStorage.getItem('staff_token'));
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            fetch('/api/auth/staff/logout', {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${localStorage.getItem('staff_token')}`}
+            }).finally(() => {
+                localStorage.clear();
+                location.reload();
+            });
+        });
+
+        // Auto-login if token exists
+        (async function() {
+            const token = localStorage.getItem('staff_token');
+            if (token) {
+                try {
+                    const res = await fetch('/api/staff/me', {
+                        headers: {'Authorization': `Bearer ${token}`}
+                    });
+                    if (res.ok) {
+                        const role = localStorage.getItem('staff_role');
+                        showDashboard(role);
+                        return;
+                    }
+                } catch(e) {}
+            }
+        })();
+    </script>
 </body>
+</html>
