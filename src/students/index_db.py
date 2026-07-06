@@ -205,11 +205,28 @@ def is_password_in_history(conn, password: str) -> bool:
 # ------------------------------------------------------------
 # Action items
 # ------------------------------------------------------------
-def get_action_items(conn) -> List[Dict]:
-    cursor = conn.execute("SELECT id, text, done, created FROM action_items ORDER BY id DESC")
+def get_action_items(conn):
+    # Create table if it doesn't exist yet
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS action_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            done INTEGER DEFAULT 0,
+            created TEXT DEFAULT (datetime('now'))
+        )
+    ''')
+    conn.commit()
+    cursor = conn.execute(
+        "SELECT id, text, done, created FROM action_items ORDER BY id DESC"
+    )
     items = []
     for row in cursor.fetchall():
-        items.append({'id': row[0], 'text': row[1], 'done': bool(row[2]), 'created': row[3]})
+        items.append({
+            'id': row[0],
+            'text': row[1],
+            'done': bool(row[2]),
+            'created': row[3]
+        })
     return items
 
 def add_action_item(conn, text: str) -> int:

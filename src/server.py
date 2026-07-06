@@ -18,6 +18,8 @@ from .meetings import coordinator as meetings_coordinator
 from .students.coordinator import StudentCoordinator
 from . import crypto_engine
 from .staff.coordinator import StaffCoordinator
+from .dashboard.coordinator import DashboardCoordinator
+from urllib.parse import parse_qs
 
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # crm-app root
@@ -96,6 +98,7 @@ def generate_ssl_context():
 class RequestHandler(SimpleHTTPRequestHandler):
     student_coordinator = None
     staff_coordinator = None
+    dashboard_coordinator = None
 
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -108,12 +111,20 @@ class RequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def translate_path(self, path):
-        """Map /students/ to launch/students/ for static files."""
         if path.startswith('/students/'):
+            return os.path.join(DIRECTORY, 'launch', path[1:])
+        if path.startswith('/dashboard/'):
             return os.path.join(DIRECTORY, 'launch', path[1:])
         return super().translate_path(path)
 
     def _route_api(self, method, path, body):
+        # Dashboard API
+        if path.startswith('/api/dashboard'):
+            if self.dashboard_coordinator:
+                rel_path = path[len('/api'):]
+                headers = {k: v for k, v in self.headers.items()}
+                return self.dashboard_coordinator.handle(method, rel_path, body, headers)
+
         # Meetings API
         if path.startswith('/api/meetings'):
             return meetings_coordinator.handle(method, path, body)
@@ -122,6 +133,17 @@ class RequestHandler(SimpleHTTPRequestHandler):
         if path == '/api/locations':
             if method == 'GET':
                 return self._get_locations()
+
+        # Upcoming events (holidays/exams/school breaks)
+        if path == '/api/events/upcoming':
+            if method == 'GET':
+                query = urlparse(self.path).query
+                params = parse_qs(query)
+                days = int(params.get('days', [14])[0])
+                return self._get_upcoming_events(days)
+        if path == '/api/events/meta':
+            if method == 'GET':
+                return self._get_events_meta()
 
         # Staff API
         if path.startswith('/api/auth/staff'):
@@ -156,6 +178,50 @@ class RequestHandler(SimpleHTTPRequestHandler):
         with open(loc_file, 'r') as f:
             data = json.load(f)
         return {'locations': data.get('locations', [])}, 200
+
+    def _get_upcoming_events(self, days=14):
+        import json
+        from datetime import date, timedelta
+        data_file = os.path.join(DATA_DIR, 'utils', 'holidays.json')
+        if not os.path.exists(data_file):
+            return {'events': []}, 200
+        with open(data_file, 'r') as f:
+            data = json.load(f)
+        today = date.today()
+        end_date = today + timedelta(days=days)
+        events = []
+        for country_code, country_data in data.items():
+            if country_code == 'meta':
+                continue
+            for category, items in country_data.items():
+                for item in items:
+                    start_str = item.get('start')
+                    if not start_str:
+                        continue
+                    try:
+                        event_date = date.fromisoformat(start_str)
+                    except:
+                        continue
+                    if today <= event_date <= end_date:
+                        events.append({
+                            'date': start_str,
+                            'end': item.get('end'),
+                            'name': item['name'],
+                            'type': category,
+                            'country': country_code,
+                            'notes': item.get('notes', '')
+                        })
+        events.sort(key=lambda e: e['date'])
+        return {'events': events}, 200
+
+    def _get_events_meta(self):
+        import json
+        data_file = os.path.join(DATA_DIR, 'utils', 'holidays.json')
+        if not os.path.exists(data_file):
+            return {'meta': {}}, 200
+        with open(data_file, 'r') as f:
+            data = json.load(f)
+        return {'meta': data.get('meta', {})}, 200
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -225,6 +291,10 @@ def start():
         # Init staff coordinator
     staff_coordinator = StaffCoordinator(DATA_DIR)
     RequestHandler.staff_coordinator = staff_coordinator
+
+    # Dashboard coordinator
+    dashboard_coordinator = DashboardCoordinator()
+    RequestHandler.dashboard_coordinator = dashboard_coordinator
 
     # SSL context
     ssl_context = generate_ssl_context()

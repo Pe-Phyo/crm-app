@@ -3,108 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM App – Dashboard</title>
+    <title>CRM App – Login</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; text-align: center; background: #1a1a2e; color: #eee; }
-        .button { display: inline-block; padding: 1rem 2rem; margin: 1rem; background: #0f3460; color: white; text-decoration: none; border-radius: 8px; font-size: 1.2rem; }
-        .button:hover { background: #1a1a4e; }
-        #login-form { margin: 2rem 0; }
-        input { padding: 0.5rem; margin: 0.5rem; border-radius: 4px; border: none; }
-        .error { color: #e94560; }
+        :root {
+            --bg: #1e1e2e;
+            --card-bg: #181825;
+            --primary: #89b4fa;
+            --danger: #f38ba8;
+            --text: #cdd6f4;
+            --muted: #6c7086;
+            --border: #313244;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .login-box {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            width: 320px;
+            text-align: center;
+        }
+        .login-box h1 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: normal;
+            margin-bottom: 1.5rem;
+        }
+        .login-box h1::before {
+            content: '❯ ';
+            color: #a6e3a1;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 0.6rem;
+            margin-bottom: 0.8rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        .login-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .login-box button {
+            width: 100%;
+            padding: 0.6rem;
+            background: var(--primary);
+            color: #1e1e2e;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .login-box button:hover {
+            background: #74c7ec;
+        }
+        .error {
+            color: var(--danger);
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+        .forgot {
+            color: var(--muted);
+            font-size: 0.7rem;
+            margin-top: 1rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
-    <h1>CRM App</h1>
-    <div id="login-container">
+    <div class="login-box">
+        <h1>CRM App</h1>
         <form id="login-form">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="username" placeholder="Username" required autocomplete="username">
+            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
             <button type="submit">Log In</button>
         </form>
         <p class="error" id="login-error"></p>
+        <p class="forgot" id="forgot-password">Forgot password?</p>
     </div>
-    <div id="dashboard" style="display:none;">
-        <h2>Welcome, <span id="display-name"></span> (<span id="role-display"></span>)</h2>
-        <a href="/launch/meetings/meetings.html" class="button">Meetings</a>
-        <a href="/launch/students/students.html" class="button">Students</a>
-        <a href="/launch/staff/staff.html" class="button" id="staff-btn" style="display:none;">Staff</a>
-        <button id="logout-btn" class="button" style="background:#555;">Logout</button>
-    </div>
-    <script>
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-        const dashboard = document.getElementById('dashboard');
-        const loginContainer = document.getElementById('login-container');
+    <script type="module">
+        import { login } from './dashboard/js/api.js';
 
-        loginForm.addEventListener('submit', async (e) => {
+        const form = document.getElementById('login-form');
+        const errorEl = document.getElementById('login-error');
+        const forgotEl = document.getElementById('forgot-password');
+
+        // Auto-redirect if already logged in
+        if (localStorage.getItem('staff_token')) {
+            window.location.href = '/launch/dashboard/dashboard.html';
+        }
+
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             try {
-                const res = await fetch('/api/auth/staff/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username, password})
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
-                // Store token and role
+                const data = await login(username, password);
                 localStorage.setItem('staff_token', data.token);
                 localStorage.setItem('staff_role', data.role);
                 localStorage.setItem('staff_uuid', data.uuid);
-                showDashboard(data.role);
+                window.location.href = '/launch/dashboard/dashboard.html';
             } catch (err) {
-                loginError.textContent = err.message;
+                errorEl.textContent = err.message;
             }
         });
 
-        function showDashboard(role) {
-            loginContainer.style.display = 'none';
-            dashboard.style.display = 'block';
-            document.getElementById('role-display').textContent = role;
-            // Fetch own profile for display name
-            fetch('/api/staff/me', {
-                headers: {'Authorization': `Bearer ${localStorage.getItem('staff_token')}`}
-            })
-            .then(r => r.json())
-            .then(prof => {
-                document.getElementById('display-name').textContent = prof.display_name || prof.username;
-            })
-            .catch(() => {});
-            // Show staff button only for admin (and maybe teacher later)
-            if (role === 'admin') {
-                document.getElementById('staff-btn').style.display = 'inline-block';
-            }
-            // Set token for other pages
-            localStorage.setItem('staff_token', localStorage.getItem('staff_token'));
-        }
-
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            fetch('/api/auth/staff/logout', {
-                method: 'POST',
-                headers: {'Authorization': `Bearer ${localStorage.getItem('staff_token')}`}
-            }).finally(() => {
-                localStorage.clear();
-                location.reload();
-            });
+        forgotEl.addEventListener('click', () => {
+            alert('Please contact the administrator to reset your password.\nA request will be sent to the Dev dashboard.');
+            // Future: POST /api/dashboard/forgot-password
         });
-
-        // Auto-login if token exists
-        (async function() {
-            const token = localStorage.getItem('staff_token');
-            if (token) {
-                try {
-                    const res = await fetch('/api/staff/me', {
-                        headers: {'Authorization': `Bearer ${token}`}
-                    });
-                    if (res.ok) {
-                        const role = localStorage.getItem('staff_role');
-                        showDashboard(role);
-                        return;
-                    }
-                } catch(e) {}
-            }
-        })();
     </script>
 </body>
 </html>
