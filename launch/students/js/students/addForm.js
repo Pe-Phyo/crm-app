@@ -20,6 +20,78 @@ setupMultiInput('parentPhonesContainer', 'parent-phone-input');
 setupMultiInput('parentEmailsContainer', 'parent-email-input');
 
 // ------------------------------------------------------------
+// Teacher & Group meeting helpers
+// ------------------------------------------------------------
+let teacherCache = [];
+let groupMeetingCache = [];
+
+async function loadTeachers() {
+    try {
+        const res = await apiCall('GET', '/staff/teachers');
+        teacherCache = res || [];
+    } catch (e) {
+        teacherCache = [];
+    }
+    const select = document.getElementById('teacherSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Select --</option>' +
+        teacherCache.map(t => `<option value="${t.uuid}">${t.display_name}</option>`).join('');
+}
+
+async function loadGroupMeetings() {
+    try {
+        const res = await apiCall('GET', '/meetings/groups');
+        groupMeetingCache = res || [];
+    } catch (e) {
+        groupMeetingCache = [];
+    }
+}
+
+function showGroupDropdown() {
+    const old = document.getElementById('groupMeetingContainer');
+    if (old) old.innerHTML = '';  // clear previous content
+    else return;
+
+    const container = document.getElementById('groupMeetingContainer');
+    container.innerHTML = `
+        <label>Existing Group</label>
+        <select id="groupMeetingSelect">
+            <option value="">-- pick or new --</option>
+            ${groupMeetingCache.map(g => `<option value="${g}">${g}</option>`).join('')}
+            <option value="__new__">+ New group (enter name below)</option>
+        </select>
+    `;
+    const meetingNameInput = document.getElementById('meetingName');
+    const groupSelect = document.getElementById('groupMeetingSelect');
+    groupSelect.addEventListener('change', () => {
+        const val = groupSelect.value;
+        if (val === '__new__') {
+            meetingNameInput.value = '';
+            meetingNameInput.disabled = false;
+            meetingNameInput.placeholder = 'Enter new group name';
+        } else if (val) {
+            meetingNameInput.value = val;
+            meetingNameInput.disabled = true;
+        } else {
+            meetingNameInput.value = '';
+            meetingNameInput.disabled = false;
+            meetingNameInput.placeholder = 'e.g., Math Group A';
+        }
+    });
+    groupSelect.dispatchEvent(new Event('change'));
+}
+
+function hideGroupDropdown() {
+    const container = document.getElementById('groupMeetingContainer');
+    if (container) container.innerHTML = '';
+    const meetingNameInput = document.getElementById('meetingName');
+    if (meetingNameInput) {
+        meetingNameInput.disabled = false;
+        meetingNameInput.placeholder = 'e.g., Math Group A';
+    }
+}
+
+// ------------------------------------------------------------
 // Open / Close
 // ------------------------------------------------------------
 modalCancelBtn.addEventListener('click', closeForm);
@@ -28,6 +100,8 @@ export function openAddForm() {
     editingStudentUuid = null;
     modalTitle.textContent = 'Add Student';
     resetForm();
+    loadTeachers();
+    loadGroupMeetings();
     studentModal.classList.add('active');
 }
 
@@ -38,6 +112,8 @@ export function openEditForm(student) {
     resetForm();
     document.getElementById('studentUuid').value = student.uuid;
     populateFormFromStudent(student);
+    loadTeachers();
+    loadGroupMeetings();
     studentModal.classList.add('active');
 }
 
@@ -52,8 +128,10 @@ function resetForm() {
     renderMeetingTimesList();
     renderLinkedStudentsList();
     toggleMinorSection();
-    populateLocationDropdown();   // fetch timezone list
+    populateLocationDropdown();
     document.getElementById('timezoneSelect').value = '';
+    hideGroupDropdown();
+    document.getElementById('groupMeetingContainer').innerHTML = '';
 }
 
 // ------------------------------------------------------------
@@ -86,8 +164,8 @@ document.getElementById('ageGroupSelect').addEventListener('change', toggleMinor
 // Meeting times sub‑form
 // ------------------------------------------------------------
 document.getElementById('addMeetingBtn').addEventListener('click', () => {
-    const day = document.getElementById('meetingDay').value;
     const name = document.getElementById('meetingName').value.trim();
+    const day = document.getElementById('meetingDay').value;
     const time = document.getElementById('meetingTime').value;
     const type = document.getElementById('meetingType').value;
     const inPerson = document.getElementById('meetingInPerson').checked;
@@ -100,6 +178,7 @@ document.getElementById('addMeetingBtn').addEventListener('click', () => {
     document.getElementById('meetingInPerson').checked = false;
     document.getElementById('meetingLink').value = '';
     updateMeetingLinkPlaceholder();
+    hideGroupDropdown();
 });
 
 function renderMeetingTimesList() {
@@ -205,7 +284,7 @@ studentForm.addEventListener('submit', async (e) => {
     const data = {
         name: formData.get('name'),
         age_group: formData.get('age_group'),
-        timezone: formData.get('timezone'),   // GMT offset from dropdown
+        timezone: formData.get('timezone'),
         phones: phones,
         emails: emails,
         telegram: formData.get('telegram'),
@@ -219,7 +298,9 @@ studentForm.addEventListener('submit', async (e) => {
         educational_goals: formData.get('educational_goals'),
         general_comments: formData.get('general_comments'),
         meeting_times: tempMeetingTimes,
-        linked_students: tempLinkedStudents
+        linked_students: tempLinkedStudents,
+        birthdate: formData.get('birthdate') || '',
+        teacher_id: formData.get('teacher_id') || ''
     };
 
     try {
@@ -236,7 +317,7 @@ studentForm.addEventListener('submit', async (e) => {
 });
 
 // ------------------------------------------------------------
-// Populate form for editing (simplified)
+// Populate form for editing
 // ------------------------------------------------------------
 function populateFormFromStudent(student) {
     document.querySelector('[name="name"]').value = student.name || '';
@@ -249,6 +330,9 @@ function populateFormFromStudent(student) {
     document.querySelector('[name="parent_name"]').value = student.parent_name || '';
     document.querySelector('[name="school_name"]').value = student.school_name || '';
     document.querySelector('[name="academic_year"]').value = student.academic_year || '';
+    document.querySelector('[name="birthdate"]').value = student.birthdate || '';
+    const teacherSelect = document.getElementById('teacherSelect');
+    if (teacherSelect) teacherSelect.value = student.teacher_id || '';
 
     // Multi‑value fields
     const addRow = (containerId, values, className) => {
@@ -288,4 +372,21 @@ function populateFormFromStudent(student) {
     renderLinkedStudentsList();
     updateLinkSelect(studentListCache);
     toggleMinorSection();
+
+    // If editing a meeting time with type 'group', show group dropdown (basic)
+    if (tempMeetingTimes.some(mt => mt.type === 'group')) {
+        // For simplicity, we don't auto-select existing groups, but dropdown will be visible.
+        showGroupDropdown();
+    }
 }
+
+// ------------------------------------------------------------
+// Type change listener for group dropdown
+// ------------------------------------------------------------
+document.getElementById('meetingType').addEventListener('change', (e) => {
+    if (e.target.value === 'group') {
+        showGroupDropdown();
+    } else {
+        hideGroupDropdown();
+    }
+});

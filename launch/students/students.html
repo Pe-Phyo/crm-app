@@ -65,6 +65,9 @@
                         <label>Full Name *</label>
                         <input type="text" name="name" required>
 
+                        <label>Birthdate</label>
+                        <input type="date" name="birthdate">
+
                         <label>Age Group *</label>
                         <select name="age_group" id="ageGroupSelect">
                             <option value="Adult">Adult</option>
@@ -74,6 +77,11 @@
 
                         <label>Location / Timezone</label>
                         <select name="timezone" id="timezoneSelect">
+                            <option value="">-- Select --</option>
+                        </select>
+
+                        <label>Teacher *</label>
+                        <select name="teacher_id" id="teacherSelect" required>
                             <option value="">-- Select --</option>
                         </select>
 
@@ -155,10 +163,12 @@
                         <input type="number" name="rate" required>
                     </fieldset>
 
-                    <!-- Section 4: Meeting Times (mirrors meeting add modal) -->
+                    <!-- Section 4: Meeting Times -->
                     <fieldset class="form-section">
                         <legend>Meeting Times</legend>
                         <div id="meetingTimesList"></div>
+
+                        <div id="groupMeetingContainer"></div>  <!-- group dropdown inserted here -->
 
                         <label>Meeting Name</label>
                         <input type="text" id="meetingName" placeholder="e.g., Math Group A">
@@ -205,7 +215,7 @@
             </div>
         </div>
 
-        <!-- Student Detail Modal (unchanged for now) -->
+        <!-- Student Detail Modal -->
         <div class="modal-overlay" id="detailModal">
             <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto;">
                 <div id="detailContent"></div>

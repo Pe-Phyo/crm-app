@@ -8,6 +8,7 @@ from . import auth as auth_module
 from . import index_db as index
 from . import student_db as student
 from ..staff import auth as staff_auth
+from ..meetings.db import add_meeting as add_meeting_db   # NEW import
 
 # ------------------------------------------------------------
 class StudentCoordinator:
@@ -121,7 +122,7 @@ class StudentCoordinator:
         profile = {
             'uuid': new_uuid,
             'name': data.get('name', ''),
-            'location': '',   # not used currently, but keep for schema
+            'location': '',
             'timezone': data.get('timezone', ''),
             'age_group': data.get('age_group', 'Adult'),
             'academic_year': data.get('academic_year', ''),
@@ -132,10 +133,11 @@ class StudentCoordinator:
             'educational_goals': data.get('educational_goals', ''),
             'behavioral_comments': '',
             'general_comments': data.get('general_comments', ''),
-            'rate': data.get('rate', 0)
+            'rate': data.get('rate', 0),
+            'birthdate': data.get('birthdate', ''),
+            'teacher_id': data.get('teacher_id', '')
         }
 
-        # Meeting times
         meeting_times = data.get('meeting_times', [])
         summary = ', '.join([f"{mt['day'][:3]} {mt['time']} ({'Group' if mt.get('type')=='group' else 'Private'})" for mt in meeting_times])
 
@@ -163,6 +165,8 @@ class StudentCoordinator:
             student.set_parent_emails(student_conn, data.get('parent_emails', []))
             student.set_relationships(student_conn, data.get('linked_students', []))
             for mt in meeting_times:
+                mid = uuid.uuid4().hex
+                mt['meeting_id'] = mid
                 student.add_meeting_time(
                     student_conn,
                     name=mt.get('name', 'Unnamed'),
@@ -170,11 +174,33 @@ class StudentCoordinator:
                     time=mt.get('time', '09:00'),
                     mtype=mt.get('type', 'private'),
                     is_in_person=mt.get('is_in_person', False),
-                    meeting_id=mt.get('meeting_id')
+                    meeting_id=mid
                 )
             student_conn.commit()
         finally:
             student_conn.close()
+
+        # ---- Create meeting entries in the shared meetings DB ----
+        student_name = data.get('name', '')
+        for mt in meeting_times:
+            try:
+                add_meeting_db({
+                    'id': mt['meeting_id'],
+                    'day': mt.get('day', 'Monday'),
+                    'time': mt.get('time', '09:00'),
+                    'nickname': mt.get('name', 'Unnamed'),
+                    'type': mt.get('type', 'private'),
+                    'student_ids': [new_uuid],
+                    'student_names': [student_name],
+                    'link': mt.get('link', ''),
+                    'count': 8 if mt.get('type') == 'group' else 1,
+                    'rate': profile['rate'],
+                    'homework': '',
+                    'comments': '',
+                    'attendance': []
+                })
+            except Exception as e:
+                print(f"Warning: could not create meeting {mt.get('name')}: {e}")
 
         return {'uuid': new_uuid}, 201
 
@@ -211,14 +237,14 @@ class StudentCoordinator:
         try:
             profile = student.get_profile(student_conn)
             # Update scalar fields
-            for field in ['name', 'timezone', 'age_group', 'academic_year', 'telegram',
-                          'parent_name', 'school_name', 'educational_goals', 'general_comments', 'rate',
-                          'is_minor']:
+            allowed = ['name', 'timezone', 'age_group', 'academic_year', 'telegram',
+                       'parent_name', 'school_name', 'educational_goals', 'general_comments', 'rate',
+                       'is_minor', 'birthdate', 'teacher_id']
+            for field in allowed:
                 if field in data:
                     profile[field] = data[field]
             student.save_profile(student_conn, profile)
 
-            # Update multi‑value fields if present
             if 'phones' in data:
                 student.set_phones(student_conn, data['phones'])
             if 'emails' in data:
@@ -235,7 +261,7 @@ class StudentCoordinator:
                 for mt in data['meeting_times']:
                     student.add_meeting_time(
                         student_conn,
-                    name=mt.get('name', 'Unnamed'),
+                        name=mt.get('name', 'Unnamed'),
                         day=mt.get('day', 'Monday'),
                         time=mt.get('time', '09:00'),
                         mtype=mt.get('type', 'private'),

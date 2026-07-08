@@ -38,6 +38,8 @@ class StaffCoordinator:
         session = staff_auth.verify_session(token)
         if not session:
             return {'error': 'Unauthorized'}, 401
+        if path == '/staff/teachers' and method == 'GET':
+            return self._list_teachers()
 
         # Routes
         if path == '/staff/me' and method == 'GET':
@@ -321,6 +323,19 @@ class StaffCoordinator:
                 return profile, 200
             finally:
                 db_conn.close()
+        finally:
+            close_staff_index(index_conn)
+
+    def _list_teachers(self):
+        """Return a list of active teachers with uuid and display_name."""
+        index_conn = open_staff_index(self.root_data_dir)
+        try:
+            all_staff = get_all_staff(index_conn)
+            teachers = [{
+                'uuid': s['uuid'],
+                'display_name': s.get('display_name', s['username'])
+            } for s in all_staff if s.get('role') == 'teacher' and s.get('is_active')]
+            return teachers, 200
         finally:
             close_staff_index(index_conn)
 

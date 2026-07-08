@@ -126,3 +126,12 @@ def delete_meeting(meeting_id: str):
     c.execute('DELETE FROM meetings WHERE id = ?', (meeting_id,))
     conn.commit()
     conn.close()
+
+def get_group_names():
+    """Return a list of distinct group meeting nicknames for dropdown."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT DISTINCT nickname FROM meetings WHERE type='group' ORDER BY nickname")
+    names = [row[0] for row in c.fetchall()]
+    conn.close()
+    return names

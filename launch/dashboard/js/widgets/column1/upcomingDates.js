@@ -1,4 +1,4 @@
-import { apiCall } from '../api.js';
+import { apiCall } from '../../api.js';
 
 export async function renderUpcomingDates(container) {
     container.innerHTML = '<p>Loading upcoming events...</p>';

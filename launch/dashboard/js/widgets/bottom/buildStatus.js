@@ -1,4 +1,4 @@
-import { apiCall } from '../api.js';
+import { apiCall } from '../../api.js';
 
 export async function render(container) {
     // Header with title and refresh button

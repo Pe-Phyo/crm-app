@@ -340,3 +340,71 @@ body {
     background: #3b82f6;
     color: white;
 }
+
+/* ===== Global list-item styles (for meetings, attendance, inbox, etc.) ===== */
+.list-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+}
+.list-item:hover {
+    background: #2a2a3a;
+}
+.list-item-time {
+    color: var(--primary);
+    font-weight: bold;
+    min-width: 3.5rem;
+}
+.list-item-label {
+    flex: 1;
+    font-weight: 600;
+    cursor: pointer;
+}
+.list-item-label:hover {
+    color: var(--primary);
+}
+.list-item-meta {
+    color: var(--muted);
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+.list-item-actions {
+    display: flex;
+    gap: 3px;
+}
+.list-item-detail {
+    width: 100%;
+    font-size: 0.7rem;
+    padding-left: 4rem;
+}
+.list-item-detail.homework {
+    color: var(--warning);
+}
+.list-item-detail.comments {
+    color: var(--success);
+}
+.day-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+.day-controls span {
+    font-weight: 600;
+    min-width: 5rem;
+    text-align: center;
+}
+.attendance-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    font-size: 0.85rem;
+}
+.attendance-row input[type="checkbox"] {
+    accent-color: var(--success);
+}

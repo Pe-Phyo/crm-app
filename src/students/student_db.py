@@ -39,7 +39,9 @@ def _create_tables(conn):
             educational_goals TEXT DEFAULT '',
             behavioral_comments TEXT DEFAULT '',
             general_comments TEXT DEFAULT '',
-            rate INTEGER DEFAULT 0
+            rate INTEGER DEFAULT 0,
+            birthdate TEXT DEFAULT '',
+            teacher_id TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS phones (
@@ -124,7 +126,8 @@ def get_profile(conn) -> Dict:
         'behavioral_comments': row[11],
         'general_comments': row[12],
         'rate': row[13],
-        # Multi‑value fields are fetched separately
+        'birthdate': row[14] if len(row) > 14 else '',
+        'teacher_id': row[15] if len(row) > 15 else ''
     }
 
 def save_profile(conn, profile: Dict):
@@ -132,8 +135,9 @@ def save_profile(conn, profile: Dict):
         INSERT OR REPLACE INTO profile (
             uuid, name, location, timezone, age_group, academic_year,
             telegram, is_minor, parent_name, school_name,
-            educational_goals, behavioral_comments, general_comments, rate
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            educational_goals, behavioral_comments, general_comments, rate,
+            birthdate, teacher_id
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         profile['uuid'],
         profile.get('name', ''),
@@ -148,7 +152,9 @@ def save_profile(conn, profile: Dict):
         profile.get('educational_goals', ''),
         profile.get('behavioral_comments', ''),
         profile.get('general_comments', ''),
-        profile.get('rate', 0)
+        profile.get('rate', 0),
+        profile.get('birthdate', ''),
+        profile.get('teacher_id', '')
     ))
     conn.commit()
 
@@ -229,7 +235,7 @@ def set_relationships(conn, relationships: List[Dict]):
     conn.commit()
 
 # ------------------------------------------------------------
-# Meeting times (unchanged from before, but keep them)
+# Meeting times
 # ------------------------------------------------------------
 def get_meeting_times(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, name, day, time, type, is_in_person, meeting_id FROM meeting_times ORDER BY id")
@@ -266,7 +272,7 @@ def get_meeting_times_summary(conn) -> str:
     return ', '.join(summaries)
 
 # ------------------------------------------------------------
-# Attendance (unchanged)
+# Attendance
 # ------------------------------------------------------------
 def get_attendance(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, meeting_id, date, status FROM attendance ORDER BY date DESC")
@@ -300,7 +306,7 @@ def get_attendance_percentage(conn) -> float:
     return (present / total) * 100.0
 
 # ------------------------------------------------------------
-# Payments (unchanged)
+# Payments
 # ------------------------------------------------------------
 def get_payments(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, date, amount, receipt_image FROM payments ORDER BY date DESC")
@@ -328,7 +334,7 @@ def delete_payment(conn, payment_id: int):
     conn.commit()
 
 # ------------------------------------------------------------
-# Homework / Reading (unchanged)
+# Homework / Reading
 # ------------------------------------------------------------
 def get_homework_reading(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, entry_type, content, date FROM homework_reading ORDER BY date DESC")

@@ -123,7 +123,9 @@ class RequestHandler(SimpleHTTPRequestHandler):
             if self.dashboard_coordinator:
                 rel_path = path[len('/api'):]
                 headers = {k: v for k, v in self.headers.items()}
-                return self.dashboard_coordinator.handle(method, rel_path, body, headers)
+                # Extract query string from the full request path
+                query = urlparse(self.path).query
+                return self.dashboard_coordinator.handle(method, rel_path, body, headers, query=query)
 
         # Meetings API
         if path.startswith('/api/meetings'):

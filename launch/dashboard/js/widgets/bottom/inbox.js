@@ -1,4 +1,4 @@
-import { apiCall } from '../api.js';
+import { apiCall } from '../../api.js';
 
 export async function render(container) {
     // Build widget header with controls

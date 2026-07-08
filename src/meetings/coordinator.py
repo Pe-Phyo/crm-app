@@ -13,6 +13,9 @@ def handle(method: str, path: str, body: str = None) -> Tuple[Any, int]:
                 return {'success': True, 'id': meeting_id}, 200
             except Exception as e:
                 return {'error': str(e)}, 500
+    elif path == '/api/meetings/groups':
+        if method == 'GET':
+            return db.get_group_names(), 200
     elif path.startswith('/api/meetings/'):
         meeting_id = path.split('/')[-1]
         if method == 'PUT':
