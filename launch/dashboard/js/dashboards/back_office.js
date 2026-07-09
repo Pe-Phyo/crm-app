@@ -2,13 +2,13 @@ export default {
     greeting: null,
     layout: '1fr 1fr',
     eyeMenu: [
-        { label: 'Staff Management', action: '#' },
+        { label: 'Staff Management', action: '/launch/staff/staff.html' },
         { label: 'Financials', action: '#' },
         { label: 'Payroll & Expenses', action: '#' },
         { label: 'Student View', action: '#' },
         { label: 'Meetings View', action: '#' },
         { label: 'Analytics', action: '#' },
-        { label: 'Profile', action: '#' }
+        { label: 'Profile', action: '/launch/staff/staff.html?mode=self' }
     ],
     widgets: [
         { id: 'upcoming-dates', type: 'upcomingDates', position: 'left', title: 'Upcoming Dates' },

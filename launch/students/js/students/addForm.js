@@ -105,11 +105,13 @@ export function openAddForm() {
     studentModal.classList.add('active');
 }
 
-export function openEditForm(student) {
+export async function openEditForm(student) {
     if (!student) return;
     editingStudentUuid = student.uuid;
     modalTitle.textContent = 'Edit Student';
     resetForm();
+    // Wait for the timezone dropdown to be filled before setting the value
+    await populateLocationDropdown();
     document.getElementById('studentUuid').value = student.uuid;
     populateFormFromStudent(student);
     loadTeachers();
@@ -271,7 +273,8 @@ export function updateLinkSelect(students) {
 studentForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(studentForm);
-
+    const tzSelect = document.getElementById('timezoneSelect');
+    const tzLabel = tzSelect.options[tzSelect.selectedIndex]?.text || '';
     const phones = Array.from(document.querySelectorAll('.phone-input'))
         .map(inp => inp.value.trim()).filter(v => v);
     const emails = Array.from(document.querySelectorAll('.email-input'))
@@ -285,6 +288,7 @@ studentForm.addEventListener('submit', async (e) => {
         name: formData.get('name'),
         age_group: formData.get('age_group'),
         timezone: formData.get('timezone'),
+        timezone_label: tzLabel, 
         phones: phones,
         emails: emails,
         telegram: formData.get('telegram'),

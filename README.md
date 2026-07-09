@@ -11,7 +11,8 @@ This modular CRM handles:
 
 - Meeting Launcher: one-click Jitsi join with low-bandwidth settings
 - Student Management: secure, encrypted client profiles with attendance, payments, and notes
-- Staff & Role Management: multi-user system with role-based dashboards (active development)
+- Staff & Role Management: multi-user system with role-based dashboards
+- Dashboard System: unified shell with six role-specific dashboards, lazy‑loaded widgets, and “View” menu
 - Database Storage: SQLite / SQLCipher on thumb drive
 - Future: Telegram bot, OCR receipt scanning, teacher profile, analytics, automation
 
@@ -36,18 +37,40 @@ This modular CRM handles:
 - Individual per-student encrypted databases (one `.sqlite` file per student)
 - Student list panel with search and filters (status, rate range, payment status)
 - Add/Edit student form with:
-  - Full name, age group, timezone (selected from worldwide list)
+  - Full name, **birthdate**, age group, timezone (selected from worldwide list)
+  - **Teacher assignment** – dropdown of active teachers
   - Multi-value phone numbers and email addresses (dynamic add/remove)
   - Telegram handle
   - Conditional minor section: parent/guardian details, school, grade
   - Multi-day meeting times with meeting name, day, time, type, in‑person flag, meeting link
+  - **Group meeting selector** – when type is “Group”, choose from existing groups or create new
   - Link to other students (family/siblings) with relationship type and invoice grouping toggle
   - Rate per lesson (MMK)
   - Educational goals and general comments
+- **Meetings automatically created** when a student is added – they appear immediately in the teacher’s dashboard and attendance widget
 - Student detail view showing all stored information, including attendance log, payment records, linked students
 - Global action items / to-do list (add, toggle, delete)
 - Password-protected student deletion (requires MEP re-entry)
 - All student data encrypted at rest
+
+### Dashboard System (new – Phase 2 milestone)
+- **Unified shell** (`dashboard.html`) that loads a role‑specific configuration
+- Six dashboards: **Admin**, **Teacher**, **Front Office**, **Back Office**, **Bot**, and **System & Dev**
+- Each dashboard defines which widgets appear in the left column (35%), right column (65%), and bottom tab area
+- **Widgets are loaded lazily and securely** – no widget code is sent to the browser until the user is authenticated, and only the widgets needed for the current role are loaded
+- **“View” menu** (eye icon) in the top bar:
+  - Admin can switch to any other role’s dashboard and back
+  - Other roles have placeholder menu items for future actions (e.g., Student View, Meetings View)
+- Built‑in widgets include:
+  - **Upcoming Dates** – holidays, exams, and eventually birthdays (timeline rules: school holidays 1 month, public holidays 1 month, exams 2 months out)
+  - **Student Highlights** – active count, top loyalty (static for now)
+  - **Meetings** (teacher right column) – day picker, today’s meetings with homework/comments, no edit/delete in dashboard
+  - **Attendance** (teacher left column) – list of students with meetings today, checkbox to mark present/absent
+  - **Inbox** (bottom tab for all roles) – shared action items (Eisenhower matrix tinting planned)
+  - **Build Status** (admin/dev) – placeholder for system health
+  - **Payments Summary**, **Bot Health**, **Agent Health**, **Messages**, **Financial Overview**, etc. – stubs for future work
+- Front‑office “Student View” menu item links directly to the student creation page
+- No duplicated CSS – the dashboard reuses the meeting page’s styles where appropriate, with a plan to unify into a single global theme
 
 ### Staff & Multi-User System (active)
 - Master Encryption Password (MEP) splits encryption from user login; entered once at console
@@ -55,15 +78,17 @@ This modular CRM handles:
 - Roles: `admin`, `teacher`, `front_office`, `back_office`, `bot`, `dev`
 - Staff login via browser (username + password) with session tokens (60-minute expiry)
 - Admin panel: create, approve (with MEP), and delete staff accounts
+- **Teacher listing endpoint** (`GET /api/staff/teachers`) – available to any authenticated user, used by student creation form
 - Own-profile editing (name, contact, rate, bio); availability and holidays UI in progress
 - Student module now uses staff token for access (no separate student password)
 
 ### Recent Architectural Decisions
 - **MEP split**: `crypto_engine` holds master key in memory after console unlock; user passwords unrelated to encryption.
-- **Meeting–student linking deferred**: Future meeting refactor for multi-day packages, teacher assignment.
+- **Meeting–student linking**: Student creation automatically adds meeting rows to the shared meetings database; meeting times linked to student profiles.
 - **Timezone data**: Generated once via `generate_timezone_data.py` → `data/utils/timezone_data.json`.
-- **Frontend modularisation**: Student JS split into `auth/`, `students/`, `actions/`, `utils/`. Staff JS follows similar pattern.
+- **Frontend modularisation**: Dashboard widgets organised by screen location (`column1/`, `column2/`, `bottom/`). Student JS remains under `students/`.
 - **Database normalisation**: Phones, emails, parent contacts, relationships stored in dedicated encrypted tables. No JSON blobs in plain sight.
+- **Security**: Dashboard widget files are only imported dynamically after authentication – no frontend code leaks before login.
 
 ---
 
@@ -101,23 +126,52 @@ crm-app/
 │   ├── server.py               # HTTPS server, SSL, routing
 │   ├── crypto_engine.py        # MEP unlock, master key management
 │   ├── meetings/
-│   │   ├── db.py               # Meetings DB init & CRUD
-│   │   └── coordinator.py      # Meetings API router
+│   │   ├── db.py               # Meetings DB init & CRUD (+ group names)
+│   │   └── coordinator.py      # Meetings API router (+ /api/meetings/groups)
 │   ├── students/
-│   │   ├── coordinator.py      # Student API router
+│   │   ├── coordinator.py      # Student API router (creates meetings on student add)
 │   │   ├── crypto.py           # Encryption & key derivation
-│   │   ├── index_db.py         # Encrypted central index
-│   │   ├── student_db.py       # Per-student encrypted DB
+│   │   ├── index_db.py         # Encrypted central index (student summaries)
+│   │   ├── student_db.py       # Per-student encrypted DB (profile + birthdate + teacher_id)
 │   │   ├── auth.py             # (Legacy) password, session, expiry
 │   │   └── models.py           # Data structures
 │   └── staff/
-│       ├── coordinator.py      # Staff API router
+│       ├── coordinator.py      # Staff API router (+ /api/staff/teachers)
 │       ├── auth.py             # Staff session management
 │       ├── index_db.py         # Encrypted staff index
 │       ├── staff_db.py         # Per-staff encrypted DB
 │       └── models.py           # Staff data structures
 ├── launch/
 │   ├── index.html              # Login page (username + password)
+│   ├── dashboard/              # Role-based dashboard system
+│   │   ├── dashboard.html      # Unified shell
+│   │   ├── css/styles.css      # Dashboard theme (Catppuccin Dark)
+│   │   └── js/
+│   │       ├── coordinator.js  # Core dashboard logic, lazy widget loading
+│   │       ├── api.js          # Shared API helper (staff token)
+│   │       ├── widgets.js      # Widget renderer and registry
+│   │       ├── dashboards/     # Role config files (admin.js, teacher.js, ...)
+│   │       └── widgets/
+│   │           ├── column1/    # Left-column widgets (35%)
+│   │           │   ├── upcomingDates.js
+│   │           │   ├── studentHighlights.js
+│   │           │   ├── attendance.js
+│   │           │   ├── paymentsSummary.js
+│   │           │   ├── botHealth.js
+│   │           │   └── agentHealth.js
+│   │           ├── column2/    # Right-column widgets (65%)
+│   │           │   ├── meetings.js
+│   │           │   ├── messages.js
+│   │           │   └── analytics/   # Chart stubs
+│   │           └── bottom/     # Bottom-area widgets (tabbed or full-width)
+│   │               ├── inbox.js
+│   │               ├── buildStatus.js
+│   │               ├── allLogs.js
+│   │               ├── errors.js
+│   │               ├── templates.js
+│   │               ├── addFinances.js
+│   │               ├── activityLog.js
+│   │               └── apiConsole.js
 │   ├── meetings/               # Meetings frontend
 │   │   ├── meetings.html
 │   │   ├── css/styles.css
@@ -134,7 +188,7 @@ crm-app/
 │   │       ├── app.js
 │   │       ├── config.js
 │   │       ├── students/
-│   │       │   ├── addForm.js
+│   │       │   ├── addForm.js          # Updated with teacher, birthdate, group selector
 │   │       │   ├── detailView.js
 │   │       │   └── list.js
 │   │       ├── actions/
@@ -224,6 +278,17 @@ Create new staff accounts (inactive by default).
 Approve staff accounts (requires MEP).
 
 Edit own profile, availability, holidays (UI in progress).
+
+Dashboards (new)
+After login, the dashboard shell loads the role‑appropriate layout.
+
+Admin can use the “View” menu to switch to any other role’s dashboard (teacher, front‑office, back‑office, bot, dev).
+
+The teacher dashboard shows meetings for any day (via day picker) and a “Today’s Attendance” checklist.
+
+Front‑office dashboard can jump to student creation or meetings view via the “View” menu.
+
+Other dashboards contain placeholder widgets for future features.
 
 Installation & Setup
 Prerequisites
@@ -334,28 +399,17 @@ Staff accounts & role-based access
 
 Admin staff creation/approval workflow
 
-Dashboard shell refactoring (next major milestone)
+Dashboard shell with role-based views (complete)
 
-<!-- current-phase: Dashboard Shell Refactoring --><!-- current-task: Admin dashboard operational, back office dashboard stubbed -->
-Unified shell with role-based sidebar (or tabs) shared by all dashboards.
+Teacher dropdown, birthdate, group meeting selector in student form (complete)
 
-Admin/CEO Dashboard: business health (active students, revenue, outstanding payments), system health (MEP status, USB free space, bot statuses), inbox with Eisenhower matrix, analytics (Chart.js), build status from git log.
+Meeting auto-creation on student add (complete)
 
-Teacher Dashboard: own student list, upcoming meetings, availability & holidays editor, personal action items.
+Unified inbox stub (future: Eisenhower matrix)
 
-Front Office Dashboard: leads, today’s schedule, payments summary, messaging placeholders.
+Attendance widget (teacher dashboard) – ready for backend wiring
 
-Back Office Dashboard: financial overview, payroll & expenses, pending approvals.
-
-Bot Management Dashboard: bot status list, live activity log, templates, errors.
-
-System & Dev Dashboard: build status, system health, logs viewer, API console (stub).
-
-"View as…" feature for admin to preview any role’s dashboard.
-
-Inbox heuristics per role, starting with the Eisenhower quadrant for admin.
-
-Meeting–student integration (deferred to dedicated meeting refactor)
+Meeting–student integration (completed via auto-creation; future refactor for multi-day packages)
 
 Phase 3: Telegram Bot
 Deploy bot to Render (free tier)

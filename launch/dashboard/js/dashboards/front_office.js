@@ -6,7 +6,7 @@ export default {
         { label: 'Meetings View', action: '/launch/meetings/meetings.html' },
         { label: 'Payment Screen', action: '#' },
         { label: 'Financials', action: '#' },
-        { label: 'Profile', action: '#' },
+        { label: 'Profile', action: '/launch/staff/staff.html?mode=self' }
     ],
     widgets: [
         { id: 'payments-summary', type: 'paymentsSummary', position: 'left', title: 'Payments Summary' },

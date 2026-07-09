@@ -1,37 +1,3 @@
-export function renderStudentList(students, onStudentClick) {
-    const container = document.getElementById('studentList');
-    if (!students.length) {
-        container.innerHTML = '<div class="placeholder-box">No students yet.</div>';
-        return;
-    }
-
-    container.innerHTML = students.map(s => {
-        const lastPayment = s.last_payment_date || 'Never';
-        const att = s.attendance_percentage.toFixed(0);
-        return `
-        <div class="student-card" data-uuid="${s.uuid}">
-            <div class="student-card-header">
-                <strong>${escapeHtml(s.name)}</strong>
-                <span class="status-badge ${s.status}">${s.status}</span>
-            </div>
-            <div class="student-card-body">
-                <span>📍 ${escapeHtml(s.location) || '—'}</span>
-                <span>💰 ${s.rate.toLocaleString()} K</span>
-                <span>📅 Last payment: ${lastPayment}</span>
-                <span>📊 Attendance: ${att}%</span>
-                <span>🕒 ${s.meeting_times_summary || 'No meetings'}</span>
-            </div>
-        </div>`;
-    }).join('');
-
-    // Attach click handlers
-    container.querySelectorAll('.student-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const uuid = card.dataset.uuid;
-            onStudentClick(uuid);
-        });
-    });
-}
 
 export function renderActions(actions, onToggle, onDelete, onAdd) {
     const container = document.getElementById('actionItems');

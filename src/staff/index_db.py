@@ -81,9 +81,9 @@ def get_staff_by_username(conn, username: str) -> Optional[Dict]:
     }
 
 def get_all_staff(conn) -> List[Dict]:
-    cursor = conn.execute("SELECT uuid, username, role, is_active FROM staff ORDER BY username")
+    cursor = conn.execute("SELECT uuid, username, role, is_active, db_key FROM staff ORDER BY username")
     rows = cursor.fetchall()
-    return [{'uuid': r[0], 'username': r[1], 'role': r[2], 'is_active': bool(r[3])} for r in rows]
+    return [{'uuid': r[0], 'username': r[1], 'role': r[2], 'is_active': bool(r[3]), 'db_key': r[4]} for r in rows]
 
 def update_staff_active(conn, uuid: str, is_active: bool):
     conn.execute("UPDATE staff SET is_active=? WHERE uuid=?", (1 if is_active else 0, uuid))

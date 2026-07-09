@@ -4,7 +4,7 @@ export default {
     eyeMenu: [
         { label: 'Analytics', action: '#' },
         { label: 'Financials', action: '#' },
-        { label: 'Profile', action: '#' },
+        { label: 'Profile', action: '/launch/staff/staff.html?mode=self' }
     ],
     widgets: [
         { id: 'build-status', type: 'buildStatus', position: 'left', title: 'Build Status' },

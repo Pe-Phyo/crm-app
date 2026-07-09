@@ -20,7 +20,6 @@ DB_FILE = "index.db"
 # Internal helpers
 # ------------------------------------------------------------
 def _derive_key(password: str, salt: bytes) -> bytes:
-    """Derive 32‑byte key from password + salt using scrypt."""
     return hashlib.scrypt(password.encode('utf-8'), salt=salt, n=2**14, r=8, p=1, dklen=32)
 
 def _read_salt(data_dir: str) -> bytes:
@@ -32,10 +31,51 @@ def _write_salt(data_dir: str, salt: bytes):
         f.write(salt)
 
 # ------------------------------------------------------------
+# Flag helpers
+# ------------------------------------------------------------
+def country_flag(code: str) -> str:
+    if len(code) != 2:
+        return ''
+    return chr(0x1F1E6 + ord(code[0]) - ord('A')) + chr(0x1F1E6 + ord(code[1]) - ord('A'))
+
+def _load_tz_flag_map(data_dir: str) -> Dict[str, str]:
+    """Return a dict mapping timezone value (e.g., 'GMT+6.5') to flag emoji."""
+    tz_file = os.path.join(data_dir, 'utils', 'timezone_data.json')
+    if not os.path.exists(tz_file):
+        return {}
+    with open(tz_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    flag_map = {}
+    for loc in data.get('locations', []):
+        tz_value = loc.get('value', '')
+        cc = loc.get('country_code', '')
+        if cc:
+            flag_map[tz_value] = country_flag(cc)
+    return flag_map
+
+def get_flag_for_timezone(data_dir: str, timezone_value: str) -> str:
+    """Return the flag emoji for a given timezone value (e.g., 'GMT+6.5')."""
+    flag_map = _load_tz_flag_map(data_dir)
+    return flag_map.get(timezone_value, '')
+
+def get_flag_for_timezone_label(data_dir: str, tz_label: str) -> str:
+    """Return the flag emoji for a given timezone label (e.g., 'Singapore')."""
+    tz_file = os.path.join(data_dir, 'utils', 'timezone_data.json')
+    if not os.path.exists(tz_file) or not tz_label:
+        return ''
+    with open(tz_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    for loc in data.get('locations', []):
+        if loc.get('label') == tz_label:
+            cc = loc.get('country_code', '')
+            if cc:
+                return country_flag(cc)
+    return ''
+
+# ------------------------------------------------------------
 # Setup / open
 # ------------------------------------------------------------
 def setup_index_db(data_dir: str, password: str):
-    """Create the index database and all its tables."""
     os.makedirs(data_dir, exist_ok=True)
     salt = os.urandom(16)
     _write_salt(data_dir, salt)
@@ -43,11 +83,9 @@ def setup_index_db(data_dir: str, password: str):
     db_path = os.path.join(data_dir, DB_FILE)
     conn = create_encrypted_db(db_path, key)
     _create_tables(conn)
-    # Store auth record
-    pw_hash, _ = hash_password(password, salt)   # we reuse the same salt for simplicity
     conn.execute(
         "INSERT INTO auth (salt, hash, last_changed) VALUES (?, ?, ?)",
-        (salt, pw_hash, datetime.utcnow().isoformat())
+        (salt, hashlib.sha256(password.encode()).digest(), datetime.utcnow().isoformat())
     )
     conn.commit()
     conn.close()
@@ -55,12 +93,11 @@ def setup_index_db(data_dir: str, password: str):
 def open_index_db_with_key(data_dir: str, key: bytes):
     db_path = os.path.join(data_dir, DB_FILE)
     conn = open_encrypted_db(db_path, key)
-    # No password verification needed because we already authenticated.
+    _create_tables(conn)         # ensure tables including flag column
+    conn.commit()
     return conn
 
 def open_index_db(data_dir: str, password: str):
-    """Legacy – no longer used directly after MEP split.
-    Just returns the connection using the master key (stored in crypto_engine)."""
     from .. import crypto_engine
     key = crypto_engine.get_master_key()
     return open_index_db_with_key(data_dir, key)
@@ -82,7 +119,8 @@ def _create_tables(conn):
             attendance_percentage REAL DEFAULT 0.0,
             meeting_times_summary TEXT DEFAULT '',
             status TEXT DEFAULT 'active',
-            db_key BLOB NOT NULL
+            db_key BLOB NOT NULL,
+            flag TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS auth (
             id INTEGER PRIMARY KEY,
@@ -103,21 +141,35 @@ def _create_tables(conn):
             created TEXT NOT NULL
         );
     """)
+    # Add flag column if missing (for existing databases)
+    try:
+        conn.execute("ALTER TABLE students ADD COLUMN flag TEXT DEFAULT ''")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE students ADD COLUMN timezone TEXT DEFAULT ''")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE students ADD COLUMN teacher_id TEXT DEFAULT ''")
+    except:
+        pass
 
 # ------------------------------------------------------------
 # Student summaries
 # ------------------------------------------------------------
-def add_student_summary(conn, uuid: str, name: str, location: str, rate: int,
+def add_student_summary(conn, uuid: str, name: str, location: str, timezone: str, rate: int,
                         last_payment_date: str, attendance_percentage: float,
-                        meeting_times_summary: str, status: str, db_key: bytes):
+                        meeting_times_summary: str, status: str, db_key: bytes,
+                        flag: str = '', teacher_name: str = ''):
     conn.execute(
-        "INSERT INTO students (uuid, name, location, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key) VALUES (?,?,?,?,?,?,?,?,?)",
-        (uuid, name, location, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key)
+        "INSERT INTO students (uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key, flag, flag) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        (uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key, flag)
     )
     conn.commit()
 
 def update_student_summary(conn, uuid: str, **kwargs):
-    allowed = {'name', 'location', 'rate', 'last_payment_date', 'attendance_percentage', 'meeting_times_summary', 'status'}
+    allowed = {'name', 'location', 'timezone', 'rate', 'last_payment_date', 'attendance_percentage', 'meeting_times_summary', 'status', 'flag'}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return
@@ -131,7 +183,7 @@ def delete_student_summary(conn, uuid: str):
     conn.commit()
 
 def get_all_students(conn) -> List[Dict]:
-    cursor = conn.execute("SELECT uuid, name, location, rate, last_payment_date, attendance_percentage, meeting_times_summary, status FROM students ORDER BY last_payment_date DESC")
+    cursor = conn.execute("SELECT uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, flag FROM students ORDER BY last_payment_date DESC")
     rows = cursor.fetchall()
     students = []
     for row in rows:
@@ -139,16 +191,18 @@ def get_all_students(conn) -> List[Dict]:
             'uuid': row[0],
             'name': row[1],
             'location': row[2],
-            'rate': row[3],
-            'last_payment_date': row[4],
-            'attendance_percentage': row[5],
-            'meeting_times_summary': row[6],
-            'status': row[7]
+            'timezone': row[3],
+            'rate': row[4],
+            'last_payment_date': row[5],
+            'attendance_percentage': row[6],
+            'meeting_times_summary': row[7],
+            'status': row[8],
+            'flag': row[9] if len(row) > 9 else ''
         })
     return students
 
 def get_student_summary(conn, uuid: str) -> Optional[Dict]:
-    cursor = conn.execute("SELECT uuid, name, location, rate, last_payment_date, attendance_percentage, meeting_times_summary, status FROM students WHERE uuid=?", (uuid,))
+    cursor = conn.execute("SELECT uuid, name, location, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, flag FROM students WHERE uuid=?", (uuid,))
     row = cursor.fetchone()
     if row is None:
         return None
@@ -160,7 +214,8 @@ def get_student_summary(conn, uuid: str) -> Optional[Dict]:
         'last_payment_date': row[4],
         'attendance_percentage': row[5],
         'meeting_times_summary': row[6],
-        'status': row[7]
+        'status': row[7],
+        'flag': row[8] if len(row) > 8 else ''
     }
 
 def get_student_db_key(conn, uuid: str) -> Optional[bytes]:
@@ -171,16 +226,14 @@ def get_student_db_key(conn, uuid: str) -> Optional[bytes]:
     return None
 
 # ------------------------------------------------------------
-# Auth helpers (used by auth.py)
+# Auth helpers (unchanged)
 # ------------------------------------------------------------
 def get_auth_record(conn) -> Dict:
-    """Return the single auth row."""
     cursor = conn.execute("SELECT salt, hash, last_changed FROM auth LIMIT 1")
     row = cursor.fetchone()
     return {'salt': row[0], 'hash': row[1], 'last_changed': row[2]}
 
 def update_auth_password(conn, new_salt: bytes, new_hash: bytes):
-    """Update auth record after password change."""
     conn.execute(
         "UPDATE auth SET salt=?, hash=?, last_changed=? WHERE id=1",
         (new_salt, new_hash, datetime.utcnow().isoformat())
@@ -195,7 +248,6 @@ def add_password_to_history(conn, salt: bytes, pw_hash: bytes):
     conn.commit()
 
 def is_password_in_history(conn, password: str) -> bool:
-    """Check if the given password matches any stored history."""
     cursor = conn.execute("SELECT salt, hash FROM password_history")
     for salt, stored_hash in cursor.fetchall():
         if verify_password(password, salt, stored_hash):
@@ -203,10 +255,9 @@ def is_password_in_history(conn, password: str) -> bool:
     return False
 
 # ------------------------------------------------------------
-# Action items
+# Action items (unchanged)
 # ------------------------------------------------------------
 def get_action_items(conn):
-    # Create table if it doesn't exist yet
     conn.execute('''
         CREATE TABLE IF NOT EXISTS action_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -255,13 +306,10 @@ def delete_action_item(conn, item_id: int):
     conn.commit()
 
 def setup_index_db_with_master_key(data_dir: str, master_key: bytes):
-    """Create the student index database using the already‑generated master key.
-    Stores a dummy auth record (we don't use it for login anymore)."""
     os.makedirs(data_dir, exist_ok=True)
     db_path = os.path.join(data_dir, DB_FILE)
     conn = create_encrypted_db(db_path, master_key)
     _create_tables(conn)
-    # Insert a placeholder auth record (not used for verification now)
     conn.execute(
         "INSERT INTO auth (salt, hash, last_changed) VALUES (?,?,?)",
         (b'', b'', datetime.utcnow().isoformat())

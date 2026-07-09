@@ -1,34 +1,4 @@
-/* ===== CRM Dashboard – Catppuccin Dark Theme ===== */
-:root {
-    --bg: #1e1e2e;
-    --card-bg: #181825;
-    --primary: #89b4fa;
-    --success: #a6e3a1;
-    --warning: #f9e2af;
-    --danger: #f38ba8;
-    --text: #cdd6f4;
-    --muted: #6c7086;
-    --border: #313244;
-    --radius: 6px;
-    --font: 'Menlo', 'Monaco', 'Courier New', monospace;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
+/* ===== Dashboard Layout ===== */
 #shell {
     display: flex;
     flex-direction: column;
@@ -36,8 +6,6 @@ body {
     padding: 1rem;
     gap: 1rem;
 }
-
-/* Top bar */
 #top-bar {
     display: flex;
     justify-content: space-between;
@@ -45,18 +13,14 @@ body {
     padding-bottom: 0.5rem;
     border-bottom: 2px solid var(--border);
 }
-
 #top-bar .greeting {
     color: var(--primary);
     font-size: 1.3rem;
 }
-
 #top-bar .actions {
     display: flex;
     gap: 0.8rem;
 }
-
-/* View-as banner */
 #view-as-banner {
     background: var(--warning);
     color: #1e1e2e;
@@ -70,29 +34,25 @@ body {
     font-weight: bold;
     cursor: pointer;
 }
-
 #main-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
     flex: 0 0 35%;
 }
-
 #bottom-tabs {
     display: flex;
     flex-direction: column;
     border-top: 2px solid var(--border);
     padding-top: 0.5rem;
-    flex: 1; 
+    flex: 1;
     overflow-y: auto;
 }
-
 .tab-nav {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
 }
-
 .tab-nav button {
     background: var(--card-bg);
     color: var(--text);
@@ -103,19 +63,17 @@ body {
     font-family: var(--font);
     font-size: 0.8rem;
 }
-
 .tab-nav button.active {
     background: var(--primary);
     color: #1e1e2e;
     border-color: var(--primary);
 }
-
 .tab-content {
     flex: 1;
     overflow-y: auto;
 }
 
-/* Widget card */
+/* Widgets */
 .widget {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -125,25 +83,17 @@ body {
     flex-direction: column;
     overflow: hidden;
 }
-
 .widget-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.8rem;
 }
-
 .widget-title {
     font-weight: 600;
-    color: var(--text);
-    font-size: 0.9rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-family: var(--font);
     color: var(--primary);
+    font-size: 0.9rem;
 }
-
 .widget-title input {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -153,106 +103,28 @@ body {
     font-family: var(--font);
     font-size: 0.85rem;
 }
-
 .widget-body {
     flex: 1;
     overflow-y: auto;
 }
 
-/* Utility */
-.btn {
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: var(--card-bg);
-    color: var(--text);
-    cursor: pointer;
-    font-family: var(--font);
-    font-size: 0.8rem;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: #1e1e2e;
-    border-color: var(--primary);
-}
-
-.btn-danger {
-    background: var(--danger);
-    color: #1e1e2e;
-    border-color: var(--danger);
-}
-
-/* Inbox list */
-.inbox-list {
-    list-style: none;
-}
-
+/* Inbox */
 .inbox-item {
     display: flex;
-    padding: 0.5rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.8rem;
-    cursor: pointer;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #334155;
 }
-
-.inbox-item:hover {
-    background: #2a2a3a;
+.inbox-item.done .inbox-text {
+    text-decoration: line-through;
+    color: #64748b;
 }
-
 .inbox-item.q1 { border-left: 3px solid var(--danger); }
 .inbox-item.q2 { border-left: 3px solid var(--warning); }
 .inbox-item.q3 { border-left: 3px solid var(--primary); }
 .inbox-item.q4 { border-left: 3px solid var(--muted); }
 
-.inbox-item .item-content {
-    flex: 1;
-}
-
-.inbox-item .item-meta {
-    color: var(--muted);
-    font-size: 0.7rem;
-}
-
-/* Modal */
-.modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.7);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-.modal-overlay.active { display: flex; }
-.modal {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    width: 90%;
-    max-width: 500px;
-    color: var(--text);
-}
-.modal h3 { color: var(--primary); margin-bottom: 1rem; }
-.modal textarea {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.5rem;
-    border-radius: 4px;
-    font-family: var(--font);
-    resize: vertical;
-}
-.modal-actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    margin-top: 1rem;
-}
-
-/* Eye icon */
+/* Eye menu */
 .eye-menu {
     position: relative;
     display: inline-block;
@@ -278,133 +150,4 @@ body {
 }
 .eye-menu .popup a:hover {
     background: var(--border);
-}
-
-/* Widget header */
-.widget-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-.widget-title {
-    font-weight: bold;
-    font-size: 16px;
-}
-.widget-controls {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-}
-
-/* Small button variant */
-.btn-sm {
-    padding: 3px 8px;
-    font-size: 12px;
-}
-
-/* Empty state */
-.empty-state {
-    color: #94a3b8;
-    font-style: italic;
-    text-align: center;
-    margin-top: 10px;
-}
-
-/* Inbox items */
-.inbox-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px solid #334155;
-}
-.inbox-item.done .inbox-text {
-    text-decoration: line-through;
-    color: #64748b;
-}
-.inbox-status {
-    font-size: 12px;
-    color: #94a3b8;
-}
-
-#bottom-tabs {
-    margin-top: 20px;
-    min-height: 200px;
-    border-top: 1px solid #475569;
-    padding-top: 10px;
-}
-.tab-nav button {
-    margin-right: 5px;
-}
-.tab-nav button.active {
-    background: #3b82f6;
-    color: white;
-}
-
-/* ===== Global list-item styles (for meetings, attendance, inbox, etc.) ===== */
-.list-item {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.8rem;
-}
-.list-item:hover {
-    background: #2a2a3a;
-}
-.list-item-time {
-    color: var(--primary);
-    font-weight: bold;
-    min-width: 3.5rem;
-}
-.list-item-label {
-    flex: 1;
-    font-weight: 600;
-    cursor: pointer;
-}
-.list-item-label:hover {
-    color: var(--primary);
-}
-.list-item-meta {
-    color: var(--muted);
-    font-size: 0.7rem;
-    white-space: nowrap;
-}
-.list-item-actions {
-    display: flex;
-    gap: 3px;
-}
-.list-item-detail {
-    width: 100%;
-    font-size: 0.7rem;
-    padding-left: 4rem;
-}
-.list-item-detail.homework {
-    color: var(--warning);
-}
-.list-item-detail.comments {
-    color: var(--success);
-}
-.day-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0.5rem;
-}
-.day-controls span {
-    font-weight: 600;
-    min-width: 5rem;
-    text-align: center;
-}
-.attendance-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.3rem 0;
-    font-size: 0.85rem;
-}
-.attendance-row input[type="checkbox"] {
-    accent-color: var(--success);
 }

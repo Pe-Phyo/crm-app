@@ -27,8 +27,14 @@ export async function render(container) {
     let meetings = [];
 
     // Load all meetings once
+    let url = '/api/meetings';
+    const profile = window.__dashboardProfile;
+    if (profile && profile.role === 'teacher' && profile.uuid) {
+        url = `/api/meetings?teacher_id=${encodeURIComponent(profile.uuid)}`;
+    }
+
     try {
-        meetings = await apiCall('GET', '/api/meetings');
+        meetings = await apiCall('GET', url);
     } catch (e) {
         listEl.innerHTML = '<p style="color:var(--muted);">Could not load meetings.</p>';
         return;

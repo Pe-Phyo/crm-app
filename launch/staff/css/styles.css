@@ -1,25 +1,39 @@
-#availability-grid {
-    border-collapse: collapse;
-    margin: 1rem 0;
-}
-#availability-grid th,
-#availability-grid td {
-    border: 1px solid #475569;
-    padding: 4px 8px;
-    text-align: center;
-    font-size: 12px;
+/* ===== Staff Cards ===== */
+.staff-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.8rem;
+    margin-bottom: 0.5rem;
     cursor: pointer;
-    user-select: none;
 }
-#availability-grid th {
-    background: #0f172a;
-    color: #e2e8f0;
+.staff-card:hover { background: #2a2a3a; }
+.staff-card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
 }
-#availability-grid td.available {
-    background: #166534;
-    color: #bbf7d0;
+.staff-card-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    font-size: 0.8rem;
+    color: var(--muted);
 }
-#availability-grid td.pending {
-    background: #854d0e;
-    color: #fef08a;
+.profile-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+}
+.profile-card h2 {
+    color: var(--primary);
+    margin-bottom: 0.8rem;
+}
+.availability-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-top: 20px;
 }

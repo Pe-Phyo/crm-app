@@ -111,6 +111,10 @@ class StudentCoordinator:
     # ---- Student CRUD ----
     def _list_students(self, conn) -> Tuple[Any, int]:
         students = index.get_all_students(conn)
+        if students:
+            print("DEBUG first student timezone:", students[0].get('timezone'))
+        else:
+            print("DEBUG no students")
         return students, 200
 
     def _create_student(self, conn, body: str) -> Tuple[Any, int]:
@@ -141,18 +145,27 @@ class StudentCoordinator:
         meeting_times = data.get('meeting_times', [])
         summary = ', '.join([f"{mt['day'][:3]} {mt['time']} ({'Group' if mt.get('type')=='group' else 'Private'})" for mt in meeting_times])
 
+        # ---- Compute flag (use label if available, otherwise fall back to offset) ----
+        tz_label = data.get('timezone_label', '')
+        if tz_label:
+            student_flag = index.get_flag_for_timezone_label(self.root_data_dir, tz_label)
+        else:
+            student_flag = index.get_flag_for_timezone(self.root_data_dir, data.get('timezone', ''))
+
         # Index entry
         index.add_student_summary(
             conn,
             uuid=new_uuid,
             name=profile['name'],
             location='',
+            timezone=profile['timezone'], 
             rate=profile['rate'],
             last_payment_date='',
             attendance_percentage=0.0,
             meeting_times_summary=summary,
             status='active',
-            db_key=key
+            db_key=key,
+            flag=student_flag
         )
 
         # Per‑student DB population
@@ -181,26 +194,119 @@ class StudentCoordinator:
             student_conn.close()
 
         # ---- Create meeting entries in the shared meetings DB ----
+        from ..meetings.db import add_meeting as add_meeting_db, get_db, update_meeting
         student_name = data.get('name', '')
-        for mt in meeting_times:
-            try:
+        teacher_id = data.get('teacher_id', '')
+
+        private_times = [mt for mt in meeting_times if mt.get('type') != 'group']
+        group_times = [mt for mt in meeting_times if mt.get('type') == 'group']
+
+        # Private meetings: each slot gets its own ID, but all share a package_id
+        if private_times:
+            package_id = uuid.uuid4().hex
+            for mt in private_times:
+                slot_id = uuid.uuid4().hex
+                try:
+                    add_meeting_db({
+                        'id': slot_id,
+                        'day': mt.get('day', 'Monday'),
+                        'time': mt.get('time', '09:00'),
+                        'nickname': f"{student_name} (Private)",
+                        'type': 'private',
+                        'student_ids': [new_uuid],
+                        'student_names': [student_name],
+                        'link': mt.get('link', ''),
+                        'count': 1,
+                        'rate': profile['rate'],
+                        'homework': '',
+                        'comments': '',
+                        'attendance': [],
+                        'teacher_id': teacher_id,
+                        'package_id': package_id
+                    })
+                    mt['meeting_id'] = slot_id
+                except Exception as e:
+                    print(f"Warning: could not create private meeting: {e}")
+
+        # Group meetings: reuse existing group or create new
+        for mt in group_times:
+            group_meeting_id = mt.get('meeting_id')
+            group_name = mt.get('name', 'Unnamed')
+            if group_meeting_id:
+                # Existing group: add student to it
+                conn_meetings = get_db()
+                c = conn_meetings.cursor()
+                c.execute("SELECT student_ids, student_names, count FROM meetings WHERE id=?", (group_meeting_id,))
+                row = c.fetchone()
+                conn_meetings.close()
+                if row:
+                    existing_ids = row[0].split(',') if row[0] else []
+                    existing_names = row[1].split(',') if row[1] else []
+                    if len(existing_ids) >= 9:
+                        print(f"Warning: group '{group_name}' is full (9 seats). Student not added.")
+                        continue
+                    existing_ids.append(new_uuid)
+                    existing_names.append(student_name)
+                    new_count = len(existing_ids)
+                    update_meeting(group_meeting_id, {
+                        'student_ids': existing_ids,
+                        'student_names': existing_names,
+                        'count': new_count
+                    })
+                else:
+                    group_meeting_id = uuid.uuid4().hex
+                    add_meeting_db({
+                        'id': group_meeting_id,
+                        'day': mt.get('day', 'Monday'),
+                        'time': mt.get('time', '09:00'),
+                        'nickname': group_name,
+                        'type': 'group',
+                        'student_ids': [new_uuid],
+                        'student_names': [student_name],
+                        'link': mt.get('link', ''),
+                        'count': 1,
+                        'rate': profile['rate'],
+                        'homework': '',
+                        'comments': '',
+                        'attendance': [],
+                        'teacher_id': teacher_id
+                    })
+            else:
+                group_meeting_id = uuid.uuid4().hex
                 add_meeting_db({
-                    'id': mt['meeting_id'],
+                    'id': group_meeting_id,
                     'day': mt.get('day', 'Monday'),
                     'time': mt.get('time', '09:00'),
-                    'nickname': mt.get('name', 'Unnamed'),
-                    'type': mt.get('type', 'private'),
+                    'nickname': group_name,
+                    'type': 'group',
                     'student_ids': [new_uuid],
                     'student_names': [student_name],
                     'link': mt.get('link', ''),
-                    'count': 8 if mt.get('type') == 'group' else 1,
+                    'count': 1,
                     'rate': profile['rate'],
                     'homework': '',
                     'comments': '',
-                    'attendance': []
+                    'attendance': [],
+                    'teacher_id': teacher_id
                 })
-            except Exception as e:
-                print(f"Warning: could not create meeting {mt.get('name')}: {e}")
+            mt['meeting_id'] = group_meeting_id
+
+        # Reopen student DB and insert meeting times with real meeting IDs
+        student_conn = student.open_student_db(student_db_dir, new_uuid, key)
+        try:
+            for mt in meeting_times:
+                student.add_meeting_time(
+                    student_conn,
+                    name=mt.get('name', 'Unnamed'),
+                    day=mt.get('day', 'Monday'),
+                    time=mt.get('time', '09:00'),
+                    mtype=mt.get('type', 'private'),
+                    is_in_person=mt.get('is_in_person', False),
+                    meeting_id=mt.get('meeting_id')
+                )
+            student_conn.commit()
+        finally:
+            student_conn.close()
 
         return {'uuid': new_uuid}, 201
 
@@ -255,7 +361,14 @@ class StudentCoordinator:
                 student.set_parent_emails(student_conn, data['parent_emails'])
             if 'linked_students' in data:
                 student.set_relationships(student_conn, data['linked_students'])
-
+            # Update flag if timezone changed (use label if sent)
+            if 'timezone' in data:
+                tz_label = data.get('timezone_label', '')
+                if tz_label:
+                    new_flag = index.get_flag_for_timezone_label(self.root_data_dir, tz_label)
+                else:
+                    new_flag = index.get_flag_for_timezone(self.root_data_dir, data['timezone'])
+                index.update_student_summary(conn, uuid, timezone=data['timezone'], flag=new_flag)
             if 'meeting_times' in data:
                 student_conn.execute("DELETE FROM meeting_times")
                 for mt in data['meeting_times']:

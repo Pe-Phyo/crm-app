@@ -9,6 +9,7 @@ export default {
         { label: 'bot', action: 'switch-role:bot' },
         { label: 'dev', action: 'switch-role:dev' },
         { label: 'admin (own)', action: 'switch-role:admin' },
+        { label: 'Profile', action: '/launch/staff/staff.html?mode=self' }
     ],
     widgets: [
         {

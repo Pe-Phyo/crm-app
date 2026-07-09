@@ -4,7 +4,7 @@ export default {
     eyeMenu: [
         { label: 'Analytics', action: '#' },
         { label: 'Financials', action: '#' },
-        { label: 'Profile', action: '#' },
+        { label: 'Profile', action: '/launch/staff/staff.html?mode=self' }
     ],
     widgets: [
         { id: 'upcoming-dates', type: 'upcomingDates', position: 'left', title: 'Upcoming Dates' },

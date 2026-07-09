@@ -41,6 +41,7 @@ async function boot() {
     }
 
     const realRole = profile.role;
+    window.__dashboardProfile = profile;
     const role = sessionStorage.getItem('view_as_role') || realRole;
     const isViewAs = !!sessionStorage.getItem('view_as_role');
 

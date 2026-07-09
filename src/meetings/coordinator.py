@@ -1,11 +1,16 @@
 import json
 from typing import Tuple, Any
 from . import db
+from urllib.parse import parse_qs
 
-def handle(method: str, path: str, body: str = None) -> Tuple[Any, int]:
+def handle(method: str, path: str, body: str = None, query: str = None) -> Tuple[Any, int]:
     if path == '/api/meetings':
         if method == 'GET':
-            return db.get_meetings(), 200
+            teacher_id = None
+            if query:
+                params = parse_qs(query)
+                teacher_id = params.get('teacher_id', [None])[0]
+            return db.get_meetings(teacher_id), 200
         if method == 'POST':
             try:
                 data = json.loads(body) if body else {}

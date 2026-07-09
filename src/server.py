@@ -129,7 +129,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
 
         # Meetings API
         if path.startswith('/api/meetings'):
-            return meetings_coordinator.handle(method, path, body)
+            query = urlparse(self.path).query
+            return meetings_coordinator.handle(method, path, body, query=query)
 
         # Location data (timezone list)
         if path == '/api/locations':

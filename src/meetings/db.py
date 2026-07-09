@@ -27,6 +27,18 @@ def init_db():
             updated TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # Add teacher_id column if not present (safe migration)
+    try:
+        c.execute("ALTER TABLE meetings ADD COLUMN teacher_id TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass   # column already exists
+    
+    # Add package_id column if not present
+    try:
+        c.execute("ALTER TABLE meetings ADD COLUMN package_id TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 
@@ -51,14 +63,18 @@ def rows_to_meetings(rows):
             'comments': row[11] or '',
             'attendance': row[12].split(',') if row[12] else [],
             'created': row[13],
-            'updated': row[14]
+            'updated': row[14],
+            'teacher_id': row[15] if len(row) > 15 else ''
         })
     return meetings
 
-def get_meetings():
+def get_meetings(teacher_id=None):
     conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT * FROM meetings ORDER BY day, time')
+    if teacher_id:
+        c.execute('SELECT * FROM meetings WHERE teacher_id=? ORDER BY day, time', (teacher_id,))
+    else:
+        c.execute('SELECT * FROM meetings ORDER BY day, time')
     rows = c.fetchall()
     conn.close()
     return rows_to_meetings(rows)
@@ -69,8 +85,8 @@ def add_meeting(data: dict):
     c.execute('''
         INSERT INTO meetings (
             id, day, time, nickname, type, student_ids, student_names,
-            link, count, rate, homework, comments, attendance
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            link, count, rate, homework, comments, attendance, teacher_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data['id'],
         data['day'],
@@ -84,7 +100,8 @@ def add_meeting(data: dict):
         data.get('rate', 0),
         data.get('homework', ''),
         data.get('comments', ''),
-        ','.join(data.get('attendance', []))
+        ','.join(data.get('attendance', [])),
+        data.get('teacher_id', '')
     ))
     conn.commit()
     conn.close()
