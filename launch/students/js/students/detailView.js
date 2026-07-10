@@ -1,4 +1,4 @@
-import { getStudent, apiCall } from '../api.js';
+import { getStudent, apiCall, getAttendance, getPayments } from '../api.js';
 import { escapeHtml } from '../utils/helpers.js';
 import { openEditForm } from './addForm.js';
 
@@ -13,18 +13,32 @@ closeDetailBtn.addEventListener('click', () => {
 export async function openStudentDetail(uuid) {
     try {
         const student = await getStudent(uuid);
+        // Fetch attendance and payments in parallel
+        const [attendance, payments] = await Promise.all([
+            getAttendance(uuid).catch(() => []),
+            getPayments(uuid).catch(() => [])
+        ]);
+
+        let invoiceDisplay = '';
+        if (student.invoice_reference) {
+            invoiceDisplay = `Next Invoice: see ${escapeHtml(student.invoice_reference)}`;
+        } else {
+            const amount = (student.next_invoice != null ? student.next_invoice : 0).toLocaleString();
+            invoiceDisplay = `Next Invoice: ${amount} K`;
+        }
+
         let html = `
             <h3>${escapeHtml(student.name)}</h3>
             <p><strong>Age Group:</strong> ${student.age_group || '—'} | <strong>Country:</strong> ${student.country || '—'} | <strong>TZ:</strong> ${student.timezone || '—'}</p>
             <p><strong>Phones:</strong> ${(student.phones || []).join(', ') || '—'}</p>
             <p><strong>Emails:</strong> ${(student.emails || []).join(', ') || '—'}</p>
             <p><strong>Telegram:</strong> ${student.telegram || '—'}</p>
-            <p><strong>Rate:</strong> ${student.rate || 0} K</p>
+            <p><strong>${invoiceDisplay}</strong></p>
             <p><strong>Meetings:</strong> ${student.meeting_times_summary || 'None'}</p>
             <h4>Attendance</h4>
-            <div>${(student.attendance || []).map(a => `${a.date} - ${a.status}`).join('<br>') || 'No records'}</div>
+            <div>${attendance.length ? attendance.map(a => `${a.date} - ${a.status}`).join('<br>') : 'No records'}</div>
             <h4>Payments</h4>
-            <div>${(student.payments || []).map(p => `${p.date}: ${p.amount} K`).join('<br>') || 'No payments'}</div>
+            <div>${payments.length ? payments.map(p => `${p.date}: ${p.amount} K`).join('<br>') : 'No payments'}</div>
             <h4>Linked Students</h4>
             <div>${(student.linked_students || []).map(l => `${l.name} (${l.relationship})`).join('<br>') || 'None'}</div>
             <hr>

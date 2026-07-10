@@ -59,15 +59,24 @@ export function renderStudentList(students, onStudentClick) {
         const flag = s.flag || '';
         const localTime = currentTimeInTz(s.timezone || 'UTC');
 
+        // Next Invoice display
+        let invoiceDisplay = '';
+        if (s.invoice_reference) {
+            invoiceDisplay = `Next Invoice: see ${s.invoice_reference}`;
+        } else {
+            const amount = (s.next_invoice != null ? s.next_invoice : 0).toLocaleString();
+            invoiceDisplay = `Next Invoice: ${amount} K`;
+        }
+
         return `
         <div class="student-card" data-uuid="${s.uuid}">
             <div class="student-card-line1">
                 <span class="student-name">${flag} ${escapeHtml(s.name)}</span>
-                <span class="student-time">${localTime} (${escapeHtml(s.timezone || 'no tz')})</span>
+                <span class="student-time">${localTime}</span>
                 <span class="status-badge ${s.status}">${s.status}</span>
             </div>
             <div class="student-card-line2">
-                <span>Rate: ${s.rate.toLocaleString()} K</span>
+                <span>${invoiceDisplay}</span>
                 <span>Last payment: ${lastPayment}</span>
                 <span>Attendance: ${attendance}</span>
             </div>
@@ -128,8 +137,10 @@ export function filterStudents(students) {
                 if (lastPayment && new Date(lastPayment) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) return false;
             }
         }
-        if (filters.rateMin !== null && s.rate < filters.rateMin) return false;
-        if (filters.rateMax !== null && s.rate > filters.rateMax) return false;
+        // Rate filter now uses next_invoice
+        const invoiceAmount = s.next_invoice || 0;
+        if (filters.rateMin !== null && invoiceAmount < filters.rateMin) return false;
+        if (filters.rateMax !== null && invoiceAmount > filters.rateMax) return false;
         return true;
     });
 }

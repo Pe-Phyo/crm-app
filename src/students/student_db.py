@@ -39,9 +39,7 @@ def _create_tables(conn):
             educational_goals TEXT DEFAULT '',
             behavioral_comments TEXT DEFAULT '',
             general_comments TEXT DEFAULT '',
-            rate INTEGER DEFAULT 0,
-            birthdate TEXT DEFAULT '',
-            teacher_id TEXT DEFAULT ''
+            birthdate TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS phones (
@@ -71,6 +69,23 @@ def _create_tables(conn):
             invoice_group INTEGER DEFAULT 0
         );
 
+        CREATE TABLE IF NOT EXISTS packages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher_id TEXT NOT NULL,
+            teacher_name TEXT NOT NULL DEFAULT '',
+            subject TEXT DEFAULT '',
+            package_name TEXT NOT NULL,
+            type TEXT NOT NULL DEFAULT 'private',
+            lesson_count INTEGER NOT NULL DEFAULT 4,
+            rate INTEGER NOT NULL,
+            discount_amount INTEGER DEFAULT 0,
+            billing_cycle TEXT NOT NULL DEFAULT 'monthly',
+            start_date TEXT DEFAULT '',
+            end_date TEXT DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'active',
+            notes TEXT DEFAULT ''
+        );
+
         CREATE TABLE IF NOT EXISTS meeting_times (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -78,7 +93,11 @@ def _create_tables(conn):
             time TEXT NOT NULL,
             type TEXT NOT NULL,
             is_in_person INTEGER DEFAULT 0,
-            meeting_id TEXT
+            meeting_id TEXT,
+            teacher_id TEXT DEFAULT '',
+            teacher_name TEXT DEFAULT '',
+            rate INTEGER DEFAULT 0,
+            package_id INTEGER DEFAULT NULL
         );
 
         CREATE TABLE IF NOT EXISTS attendance (
@@ -102,9 +121,26 @@ def _create_tables(conn):
             date TEXT NOT NULL
         );
     """)
+    # Migrations for existing databases
+    try:
+        conn.execute("ALTER TABLE meeting_times ADD COLUMN teacher_id TEXT DEFAULT ''")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE meeting_times ADD COLUMN teacher_name TEXT DEFAULT ''")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE meeting_times ADD COLUMN rate INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE meeting_times ADD COLUMN package_id INTEGER DEFAULT NULL")
+    except:
+        pass
 
 # ------------------------------------------------------------
-# Profile
+# Profile (unchanged from previous update)
 # ------------------------------------------------------------
 def get_profile(conn) -> Dict:
     cursor = conn.execute("SELECT * FROM profile LIMIT 1")
@@ -125,9 +161,7 @@ def get_profile(conn) -> Dict:
         'educational_goals': row[10],
         'behavioral_comments': row[11],
         'general_comments': row[12],
-        'rate': row[13],
-        'birthdate': row[14] if len(row) > 14 else '',
-        'teacher_id': row[15] if len(row) > 15 else ''
+        'birthdate': row[13] if len(row) > 13 else ''
     }
 
 def save_profile(conn, profile: Dict):
@@ -135,9 +169,8 @@ def save_profile(conn, profile: Dict):
         INSERT OR REPLACE INTO profile (
             uuid, name, location, timezone, age_group, academic_year,
             telegram, is_minor, parent_name, school_name,
-            educational_goals, behavioral_comments, general_comments, rate,
-            birthdate, teacher_id
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            educational_goals, behavioral_comments, general_comments, birthdate
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         profile['uuid'],
         profile.get('name', ''),
@@ -152,14 +185,12 @@ def save_profile(conn, profile: Dict):
         profile.get('educational_goals', ''),
         profile.get('behavioral_comments', ''),
         profile.get('general_comments', ''),
-        profile.get('rate', 0),
-        profile.get('birthdate', ''),
-        profile.get('teacher_id', '')
+        profile.get('birthdate', '')
     ))
     conn.commit()
 
 # ------------------------------------------------------------
-# Phones
+# Phones, Emails, Parent Phones, Parent Emails (unchanged)
 # ------------------------------------------------------------
 def get_phones(conn) -> List[str]:
     cursor = conn.execute("SELECT value FROM phones ORDER BY id")
@@ -171,9 +202,6 @@ def set_phones(conn, phones: List[str]):
         conn.execute("INSERT INTO phones (value) VALUES (?)", (phone,))
     conn.commit()
 
-# ------------------------------------------------------------
-# Emails
-# ------------------------------------------------------------
 def get_emails(conn) -> List[str]:
     cursor = conn.execute("SELECT value FROM emails ORDER BY id")
     return [row[0] for row in cursor.fetchall()]
@@ -184,9 +212,6 @@ def set_emails(conn, emails: List[str]):
         conn.execute("INSERT INTO emails (value) VALUES (?)", (email,))
     conn.commit()
 
-# ------------------------------------------------------------
-# Parent Phones
-# ------------------------------------------------------------
 def get_parent_phones(conn) -> List[str]:
     cursor = conn.execute("SELECT value FROM parent_phones ORDER BY id")
     return [row[0] for row in cursor.fetchall()]
@@ -197,9 +222,6 @@ def set_parent_phones(conn, phones: List[str]):
         conn.execute("INSERT INTO parent_phones (value) VALUES (?)", (phone,))
     conn.commit()
 
-# ------------------------------------------------------------
-# Parent Emails
-# ------------------------------------------------------------
 def get_parent_emails(conn) -> List[str]:
     cursor = conn.execute("SELECT value FROM parent_emails ORDER BY id")
     return [row[0] for row in cursor.fetchall()]
@@ -211,7 +233,7 @@ def set_parent_emails(conn, emails: List[str]):
     conn.commit()
 
 # ------------------------------------------------------------
-# Relationships (linked students)
+# Relationships (unchanged)
 # ------------------------------------------------------------
 def get_relationships(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, other_uuid, relationship_type, invoice_group FROM relationships ORDER BY id")
@@ -235,10 +257,91 @@ def set_relationships(conn, relationships: List[Dict]):
     conn.commit()
 
 # ------------------------------------------------------------
-# Meeting times
+# Packages (NEW)
 # ------------------------------------------------------------
+def add_package(conn, package: Dict) -> int:
+    """Insert a new package row and return its id."""
+    cursor = conn.execute("""
+        INSERT INTO packages (teacher_id, teacher_name, subject, package_name, type, lesson_count,
+                              rate, discount_amount, billing_cycle, start_date, end_date, status, notes)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (
+        package['teacher_id'],
+        package.get('teacher_name', ''),
+        package.get('subject', ''),
+        package['package_name'],
+        package.get('type', 'private'),
+        package.get('lesson_count', 4),
+        package['rate'],
+        package.get('discount_amount', 0),
+        package.get('billing_cycle', 'monthly'),
+        package.get('start_date', ''),
+        package.get('end_date', ''),
+        package.get('status', 'active'),
+        package.get('notes', '')
+    ))
+    conn.commit()
+    return cursor.lastrowid
+
+def get_packages(conn) -> List[Dict]:
+    """Return all packages for this student."""
+    cursor = conn.execute("SELECT * FROM packages ORDER BY id")
+    rows = cursor.fetchall()
+    packages = []
+    for row in rows:
+        packages.append({
+            'id': row[0],
+            'teacher_id': row[1],
+            'teacher_name': row[2],
+            'subject': row[3],
+            'package_name': row[4],
+            'type': row[5],
+            'lesson_count': row[6],
+            'rate': row[7],
+            'discount_amount': row[8],
+            'billing_cycle': row[9],
+            'start_date': row[10],
+            'end_date': row[11],
+            'status': row[12],
+            'notes': row[13]
+        })
+    return packages
+
+def update_package(conn, package_id: int, data: Dict):
+    """Update fields of an existing package."""
+    allowed = ['teacher_id', 'teacher_name', 'subject', 'package_name', 'type', 'lesson_count',
+               'rate', 'discount_amount', 'billing_cycle', 'start_date', 'end_date', 'status', 'notes']
+    updates = {k: v for k, v in data.items() if k in allowed}
+    if not updates:
+        return
+    set_clause = ', '.join(f"{k}=?" for k in updates)
+    values = list(updates.values()) + [package_id]
+    conn.execute(f"UPDATE packages SET {set_clause} WHERE id=?", values)
+    conn.commit()
+
+def delete_package(conn, package_id: int):
+    """Delete a package and optionally its associated meeting times."""
+    conn.execute("DELETE FROM packages WHERE id=?", (package_id,))
+    # Optionally remove meeting_times that belong to this package (if you want cascade)
+    conn.execute("DELETE FROM meeting_times WHERE package_id=?", (package_id,))
+    conn.commit()
+
+# ------------------------------------------------------------
+# Meeting times (updated to include package_id)
+# ------------------------------------------------------------
+def add_meeting_time(conn, name: str, day: str, time: str, mtype: str,
+                     is_in_person: bool, meeting_id: str = None,
+                     teacher_id: str = '', teacher_name: str = '', rate: int = 0,
+                     package_id: int = None) -> int:
+    cursor = conn.execute(
+        "INSERT INTO meeting_times (name, day, time, type, is_in_person, meeting_id, teacher_id, teacher_name, rate, package_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (name, day, time, mtype, 1 if is_in_person else 0, meeting_id, teacher_id, teacher_name, rate, package_id)
+    )
+    conn.commit()
+    return cursor.lastrowid
+
 def get_meeting_times(conn) -> List[Dict]:
-    cursor = conn.execute("SELECT id, name, day, time, type, is_in_person, meeting_id FROM meeting_times ORDER BY id")
+    cursor = conn.execute("SELECT id, name, day, time, type, is_in_person, meeting_id, teacher_id, teacher_name, rate, package_id FROM meeting_times ORDER BY id")
     items = []
     for row in cursor.fetchall():
         items.append({
@@ -248,17 +351,13 @@ def get_meeting_times(conn) -> List[Dict]:
             'time': row[3],
             'type': row[4],
             'is_in_person': bool(row[5]),
-            'meeting_id': row[6]
+            'meeting_id': row[6],
+            'teacher_id': row[7],
+            'teacher_name': row[8],
+            'rate': row[9],
+            'package_id': row[10]
         })
     return items
-
-def add_meeting_time(conn, name: str, day: str, time: str, mtype: str, is_in_person: bool, meeting_id: str = None) -> int:
-    cursor = conn.execute(
-        "INSERT INTO meeting_times (name, day, time, type, is_in_person, meeting_id) VALUES (?,?,?,?,?,?)",
-        (name, day, time, mtype, 1 if is_in_person else 0, meeting_id)
-    )
-    conn.commit()
-    return cursor.lastrowid
 
 def delete_meeting_time(conn, slot_id: int):
     conn.execute("DELETE FROM meeting_times WHERE id=?", (slot_id,))
@@ -272,7 +371,7 @@ def get_meeting_times_summary(conn) -> str:
     return ', '.join(summaries)
 
 # ------------------------------------------------------------
-# Attendance
+# Attendance, Payments, Homework (unchanged)
 # ------------------------------------------------------------
 def get_attendance(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, meeting_id, date, status FROM attendance ORDER BY date DESC")
@@ -305,9 +404,6 @@ def get_attendance_percentage(conn) -> float:
         return 0.0
     return (present / total) * 100.0
 
-# ------------------------------------------------------------
-# Payments
-# ------------------------------------------------------------
 def get_payments(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, date, amount, receipt_image FROM payments ORDER BY date DESC")
     rows = cursor.fetchall()
@@ -333,9 +429,6 @@ def delete_payment(conn, payment_id: int):
     conn.execute("DELETE FROM payments WHERE id=?", (payment_id,))
     conn.commit()
 
-# ------------------------------------------------------------
-# Homework / Reading
-# ------------------------------------------------------------
 def get_homework_reading(conn) -> List[Dict]:
     cursor = conn.execute("SELECT id, entry_type, content, date FROM homework_reading ORDER BY date DESC")
     items = []

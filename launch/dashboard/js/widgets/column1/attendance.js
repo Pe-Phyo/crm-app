@@ -11,63 +11,77 @@ export async function render(container) {
     const listEl = container.querySelector('#attendance-list');
 
     try {
-        // 1. Get today's meetings
-        const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-        const allMeetings = await apiCall('GET', '/api/meetings');
-        const todayMeetings = allMeetings.filter(m => m.day === today);
+        const todayDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+        const todayISO = new Date().toISOString().split('T')[0];
 
-        // 2. Collect unique student names
-        const uniqueStudents = [];
-        const seen = new Set();
-        todayMeetings.forEach(m => {
-            if (m.student_names) {
-                m.student_names.forEach(name => {
-                    if (!seen.has(name)) {
-                        seen.add(name);
-                        uniqueStudents.push(name);
+        // 1. Get today's meetings
+        const allMeetings = await apiCall('GET', '/api/meetings');
+        const todayMeetings = allMeetings.filter(m => m.day === todayDay);
+
+        // 2. Build list of unique students with their UUIDs
+        //    meetings have student_ids (array of UUIDs) and student_names (array of names)
+        const studentMap = new Map(); // uuid -> { name, meetingIds }
+        todayMeetings.forEach(meeting => {
+            if (meeting.student_ids && meeting.student_names) {
+                meeting.student_ids.forEach((uuid, idx) => {
+                    const name = meeting.student_names[idx] || uuid;
+                    if (!studentMap.has(uuid)) {
+                        studentMap.set(uuid, { name, meetingIds: [] });
                     }
+                    studentMap.get(uuid).meetingIds.push(meeting.id);
                 });
             }
         });
 
-        if (uniqueStudents.length === 0) {
+        if (studentMap.size === 0) {
             listEl.innerHTML = '<p style="color:var(--muted);">No students today.</p>';
             return;
         }
 
-        // 3. Fetch today's attendance (stub – returns empty array if endpoint missing)
-        let attendanceRecords = [];
-        try {
-            attendanceRecords = await apiCall('GET', `/api/attendance?date=${new Date().toISOString().split('T')[0]}`);
-        } catch (e) {
-            // Endpoint not implemented yet – ignore
+        // 3. For each student, fetch attendance and see if marked today
+        const students = [];
+        for (const [uuid, info] of studentMap.entries()) {
+            let records = [];
+            try {
+                records = await apiCall('GET', `/teacher/attendance?student_uuid=${encodeURIComponent(uuid)}`);
+            } catch (e) {
+                // ignore
+            }
+            const presentToday = records.some(r => r.date === todayISO && r.status === 'present');
+            students.push({
+                uuid,
+                name: info.name,
+                presentToday,
+                meetingIds: info.meetingIds   // first meeting ID could be used for marking
+            });
         }
 
-        const presentSet = new Set(attendanceRecords.map(r => r.student_name));
-
         // 4. Render list with checkboxes
-        listEl.innerHTML = uniqueStudents.map(name => `
+        listEl.innerHTML = students.map(s => `
             <div class="attendance-row">
-                <input type="checkbox" class="attendance-check" data-student="${escapeHtml(name)}" ${presentSet.has(name) ? 'checked' : ''}>
-                <span>${escapeHtml(name)}</span>
+                <input type="checkbox" class="attendance-check"
+                       data-student-uuid="${escapeHtml(s.uuid)}"
+                       data-meeting-id="${escapeHtml(s.meetingIds[0] || '')}"
+                       ${s.presentToday ? 'checked' : ''}>
+                <span>${escapeHtml(s.name)}</span>
             </div>
         `).join('');
 
         // 5. Handle checkbox changes
         listEl.querySelectorAll('.attendance-check').forEach(cb => {
             cb.addEventListener('change', async () => {
-                const student = cb.dataset.student;
+                const studentUuid = cb.dataset.studentUuid;
+                const meetingId = cb.dataset.meetingId;
                 const status = cb.checked ? 'present' : 'absent';
                 try {
-                    await apiCall('POST', '/api/attendance/mark', {
-                        student_name: student,
-                        date: new Date().toISOString().split('T')[0],
+                    await apiCall('POST', '/teacher/attendance', {
+                        student_uuid: studentUuid,
+                        meeting_id: meetingId,
+                        date: todayISO,
                         status: status
                     });
                 } catch (e) {
-                    // Revert checkbox if save fails (endpoint not ready)
-                    cb.checked = !cb.checked;
-                    console.warn('Attendance save failed – backend not ready?');
+                    cb.checked = !cb.checked; // revert on failure
                 }
             });
         });

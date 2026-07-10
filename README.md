@@ -14,7 +14,8 @@ This modular CRM handles:
 - Staff & Role Management: multi-user system with role-based dashboards
 - Dashboard System: unified shell with six role-specific dashboards, lazy‑loaded widgets, and “View” menu
 - Database Storage: SQLite / SQLCipher on thumb drive
-- Future: Telegram bot, OCR receipt scanning, teacher profile, analytics, automation
+- Back‑Office Pricing & Packages: encrypted package templates, subscription logic, invoice grouping
+- Future: Telegram bot, OCR receipt scanning, teacher availability integration, analytics, automation
 
 ---
 
@@ -35,25 +36,41 @@ This modular CRM handles:
 - Master Encryption Password (MEP) entered once at server start to unlock all data
 - Encrypted central index database (SQLCipher)
 - Individual per-student encrypted databases (one `.sqlite` file per student)
-- Student list panel with search and filters (status, rate range, payment status)
+- Student list panel with search and filters (status, next invoice, payment status)
 - Add/Edit student form with:
   - Full name, **birthdate**, age group, timezone (selected from worldwide list)
-  - **Teacher assignment** – dropdown of active teachers
+  - Per‑meeting teacher assignment, rate, and package templates loaded from back‑office pricing
   - Multi-value phone numbers and email addresses (dynamic add/remove)
   - Telegram handle
   - Conditional minor section: parent/guardian details, school, grade
-  - Multi-day meeting times with meeting name, day, time, type, in‑person flag, meeting link
+  - Multi-day meeting times with meeting name, day, time, type, in‑person flag, meeting link, teacher, rate
   - **Group meeting selector** – when type is “Group”, choose from existing groups or create new
   - Link to other students (family/siblings) with relationship type and invoice grouping toggle
-  - Rate per lesson (MMK)
+  - **Next Invoice** computed from active packages; linked students show primary account reference
   - Educational goals and general comments
-- **Meetings automatically created** when a student is added – they appear immediately in the teacher’s dashboard and attendance widget
-- Student detail view showing all stored information, including attendance log, payment records, linked students
+- Student detail view showing profile, meeting times, attendance log, payment records, next invoice, linked students
 - Global action items / to-do list (add, toggle, delete)
 - Password-protected student deletion (requires MEP re-entry)
 - All student data encrypted at rest
 
-### Dashboard System (new – Phase 2 milestone)
+### Domain‑Separated Backend (New Architecture)
+- **Student module** (`src/students/`) – pure profile & contact data; no attendance/payment logic
+- **Teacher module** (`src/teachers/`) – attendance recording, owned by teacher role
+- **Front‑Office module** (`src/frontoffice/`) – payment recording
+- **Back‑Office module** (`src/backoffice/pricing/`) – encrypted package templates, base rates, discount rules, subscription service (invoice calculation, package creation, linked‑student grouping)
+- All modules use the same master encryption key; pricing & future analytics databases are encrypted with SQLCipher
+- Server routes requests to the appropriate domain coordinator
+
+### Package & Subscription System (New)
+- Teachers define availability and package templates (private/group, lesson count, rate, subject, schedule)
+- Back‑office creates/manages package templates in encrypted `pricing.db`
+- Student form loads teacher‑specific templates; selecting a template auto‑fills meeting details
+- On save, a package entry is created in the student’s encrypted DB, and `next_invoice` is calculated from active packages (minus discounts)
+- Linked students with invoice grouping show combined invoice on primary account
+- Subscription status (active, paused, completed) supports legacy rate handling and re‑enrollment at current rates
+- Analytics foundation: future `analytics.db` will record package events for revenue reporting
+
+### Dashboard System
 - **Unified shell** (`dashboard.html`) that loads a role‑specific configuration
 - Six dashboards: **Admin**, **Teacher**, **Front Office**, **Back Office**, **Bot**, and **System & Dev**
 - Each dashboard defines which widgets appear in the left column (35%), right column (65%), and bottom tab area
@@ -62,31 +79,29 @@ This modular CRM handles:
   - Admin can switch to any other role’s dashboard and back
   - Other roles have placeholder menu items for future actions (e.g., Student View, Meetings View)
 - Built‑in widgets include:
-  - **Upcoming Dates** – holidays, exams, and eventually birthdays (timeline rules: school holidays 1 month, public holidays 1 month, exams 2 months out)
+  - **Upcoming Dates** – holidays, exams, and eventually birthdays
   - **Student Highlights** – active count, top loyalty (static for now)
-  - **Meetings** (teacher right column) – day picker, today’s meetings with homework/comments, no edit/delete in dashboard
-  - **Attendance** (teacher left column) – list of students with meetings today, checkbox to mark present/absent
-  - **Inbox** (bottom tab for all roles) – shared action items (Eisenhower matrix tinting planned)
-  - **Build Status** (admin/dev) – placeholder for system health
+  - **Meetings** (teacher right column) – day picker, today’s meetings with homework/comments
+  - **Attendance** (teacher left column) – list of students with meetings today, checkbox to mark present/absent (uses teacher attendance API)
+  - **Inbox** (bottom tab for all roles) – shared action items
   - **Payments Summary**, **Bot Health**, **Agent Health**, **Messages**, **Financial Overview**, etc. – stubs for future work
 - Front‑office “Student View” menu item links directly to the student creation page
-- No duplicated CSS – the dashboard reuses the meeting page’s styles where appropriate, with a plan to unify into a single global theme
 
-### Staff & Multi-User System (active)
+### Staff & Multi-User System
 - Master Encryption Password (MEP) splits encryption from user login; entered once at console
 - Staff accounts stored in encrypted per-staff databases with individual login passwords
 - Roles: `admin`, `teacher`, `front_office`, `back_office`, `bot`, `dev`
 - Staff login via browser (username + password) with session tokens (60-minute expiry)
 - Admin panel: create, approve (with MEP), and delete staff accounts
-- **Teacher listing endpoint** (`GET /api/staff/teachers`) – available to any authenticated user, used by student creation form
-- Own-profile editing (name, contact, rate, bio); availability and holidays UI in progress
-- Student module now uses staff token for access (no separate student password)
+- **Teacher listing endpoint** (`GET /api/staff/teachers`) – available to any authenticated user
+- Own-profile editing (name, contact, rate, bio); availability and holidays stored per staff, editable by teacher, approved by back‑office
 
 ### Recent Architectural Decisions
 - **MEP split**: `crypto_engine` holds master key in memory after console unlock; user passwords unrelated to encryption.
-- **Meeting–student linking**: Student creation automatically adds meeting rows to the shared meetings database; meeting times linked to student profiles.
+- **Domain separation**: Student, Teacher, Front‑Office, Back‑Office each own their data and logic; server routes accordingly.
+- **Package‑based pricing**: Per‑meeting teacher/rate removed from student profile; packages define billing, auto‑calculated next invoice.
 - **Timezone data**: Generated once via `generate_timezone_data.py` → `data/utils/timezone_data.json`.
-- **Frontend modularisation**: Dashboard widgets organised by screen location (`column1/`, `column2/`, `bottom/`). Student JS remains under `students/`.
+- **Frontend modularisation**: Dashboard widgets organised by screen location. Student JS remains under `students/`.
 - **Database normalisation**: Phones, emails, parent contacts, relationships stored in dedicated encrypted tables. No JSON blobs in plain sight.
 - **Security**: Dashboard widget files are only imported dynamically after authentication – no frontend code leaks before login.
 
@@ -94,11 +109,10 @@ This modular CRM handles:
 
 ## Tech Stack
 
-### Current Components
 | Component      | Technology                        | Notes                                 |
 |----------------|-----------------------------------|---------------------------------------|
 | Backend Server | Python 3.12                       | Lightweight, runs on thumb drive      |
-| Database       | SQLite / SQLCipher                | File-based, encrypted per-student     |
+| Database       | SQLite / SQLCipher                | File-based, encrypted per-student & staff, pricing DB encrypted |
 | Frontend       | HTML, CSS, JavaScript (ES modules)| No external dependencies              |
 | Browser        | Brave (Chromium-based)            | Privacy-focused                       |
 | Version Control| Git                               | Local + GitHub                        |
@@ -106,207 +120,175 @@ This modular CRM handles:
 | SSL/TLS        | Self-signed per-session certs     | Local CA installed once               |
 | Timezone Data  | Python `zoneinfo` (stdlib)        | One-off generation to static JSON     |
 
-### Future Components
-| Component      | Technology                        | Notes                                 |
-|----------------|-----------------------------------|---------------------------------------|
-| OCR Receipt Scanning | Tesseract or similar         | Extract payment details from images   |
-| Teacher Profile| Built-in module                   | Availability, default settings        |
-| Telegram Bot   | python-telegram-bot               |                                       |
-| LLM Integration| Hugging Face or Ollama            | Burmese language support              |
-| Cloud Sync     | Render (free tier)                | Optional backup                       |
-| Analytics      | Chart.js (local bundle)           | Role-specific dashboards              |
-
 ---
 
 ## Project Structure
-
 crm-app/
-├── main.py                     # Ultra-thin launcher
+├── main.py # Ultra-thin launcher
 ├── src/
-│   ├── server.py               # HTTPS server, SSL, routing
-│   ├── crypto_engine.py        # MEP unlock, master key management
-│   ├── meetings/
-│   │   ├── db.py               # Meetings DB init & CRUD (+ group names)
-│   │   └── coordinator.py      # Meetings API router (+ /api/meetings/groups)
-│   ├── students/
-│   │   ├── coordinator.py      # Student API router (creates meetings on student add)
-│   │   ├── crypto.py           # Encryption & key derivation
-│   │   ├── index_db.py         # Encrypted central index (student summaries)
-│   │   ├── student_db.py       # Per-student encrypted DB (profile + birthdate + teacher_id)
-│   │   ├── auth.py             # (Legacy) password, session, expiry
-│   │   └── models.py           # Data structures
-│   └── staff/
-│       ├── coordinator.py      # Staff API router (+ /api/staff/teachers)
-│       ├── auth.py             # Staff session management
-│       ├── index_db.py         # Encrypted staff index
-│       ├── staff_db.py         # Per-staff encrypted DB
-│       └── models.py           # Staff data structures
+│ ├── server.py # HTTPS server, SSL, routing to all coordinators
+│ ├── crypto_engine.py # MEP unlock, master key management
+│ ├── meetings/
+│ │ ├── db.py # Meetings DB init & CRUD (+ group names)
+│ │ └── coordinator.py # Meetings API router
+│ ├── students/
+│ │ ├── coordinator.py # Student profile API (create/read/update/delete)
+│ │ ├── crypto.py # Encryption & key derivation
+│ │ ├── index_db.py # Encrypted central index (next_invoice, invoice_reference)
+│ │ ├── student_db.py # Per-student encrypted DB (profile, contacts, packages, meeting_times)
+│ │ ├── auth.py # (Legacy) password, session, expiry
+│ │ └── models.py # Data structures
+│ ├── teachers/
+│ │ ├── coordinator.py # Teacher API router (attendance)
+│ │ └── attendance.py # Attendance service (read/write student encrypted DB)
+│ ├── frontoffice/
+│ │ ├── coordinator.py # Front‑Office API router (payments)
+│ │ └── payments/
+│ │ └── service.py # Payments service
+│ ├── backoffice/
+│ │ └── pricing/
+│ │ ├── db.py # Encrypted pricing DB (package_templates, base_rates)
+│ │ ├── models.py # PackageTemplate dataclass
+│ │ ├── coordinator.py # Pricing API router (template CRUD, student form reads)
+│ │ └── subscriptions.py # Business logic: packages, invoice calc, linked grouping
+│ └── staff/
+│ ├── coordinator.py # Staff API router (+ /api/staff/teachers)
+│ ├── auth.py # Staff session management
+│ ├── index_db.py # Encrypted staff index
+│ ├── staff_db.py # Per-staff encrypted DB (profile, availability, holidays)
+│ └── models.py # Staff data structures
 ├── launch/
-│   ├── index.html              # Login page (username + password)
-│   ├── dashboard/              # Role-based dashboard system
-│   │   ├── dashboard.html      # Unified shell
-│   │   ├── css/styles.css      # Dashboard theme (Catppuccin Dark)
-│   │   └── js/
-│   │       ├── coordinator.js  # Core dashboard logic, lazy widget loading
-│   │       ├── api.js          # Shared API helper (staff token)
-│   │       ├── widgets.js      # Widget renderer and registry
-│   │       ├── dashboards/     # Role config files (admin.js, teacher.js, ...)
-│   │       └── widgets/
-│   │           ├── column1/    # Left-column widgets (35%)
-│   │           │   ├── upcomingDates.js
-│   │           │   ├── studentHighlights.js
-│   │           │   ├── attendance.js
-│   │           │   ├── paymentsSummary.js
-│   │           │   ├── botHealth.js
-│   │           │   └── agentHealth.js
-│   │           ├── column2/    # Right-column widgets (65%)
-│   │           │   ├── meetings.js
-│   │           │   ├── messages.js
-│   │           │   └── analytics/   # Chart stubs
-│   │           └── bottom/     # Bottom-area widgets (tabbed or full-width)
-│   │               ├── inbox.js
-│   │               ├── buildStatus.js
-│   │               ├── allLogs.js
-│   │               ├── errors.js
-│   │               ├── templates.js
-│   │               ├── addFinances.js
-│   │               ├── activityLog.js
-│   │               └── apiConsole.js
-│   ├── meetings/               # Meetings frontend
-│   │   ├── meetings.html
-│   │   ├── css/styles.css
-│   │   └── js/
-│   │       ├── api.js
-│   │       ├── app.js
-│   │       ├── config.js
-│   │       └── render.js
-│   ├── students/               # Student frontend (uses staff token)
-│   │   ├── students.html
-│   │   ├── css/styles.css
-│   │   └── js/
-│   │       ├── api.js
-│   │       ├── app.js
-│   │       ├── config.js
-│   │       ├── students/
-│   │       │   ├── addForm.js          # Updated with teacher, birthdate, group selector
-│   │       │   ├── detailView.js
-│   │       │   └── list.js
-│   │       ├── actions/
-│   │       │   └── actions.js
-│   │       └── utils/
-│   │           └── helpers.js
-│   └── staff/                  # Staff management & profiles
-│       ├── staff.html
-│       ├── css/
-│       │   └── styles.css
-│       └── js/
-│           ├── api.js
-│           ├── app.js
-│           ├── config.js
-│           ├── admin/          # (future admin widgets)
-│           ├── profile/        # (future profile widgets)
-│           └── auth/           # (future auth helpers)
+│ ├── index.html # Login page
+│ ├── dashboard/ # Role-based dashboard system
+│ │ ├── dashboard.html
+│ │ ├── css/styles.css
+│ │ └── js/
+│ │ ├── coordinator.js
+│ │ ├── api.js
+│ │ ├── widgets.js
+│ │ ├── dashboards/
+│ │ └── widgets/
+│ │ ├── column1/ # Left-column widgets
+│ │ │ ├── attendance.js
+│ │ │ ├── upcomingDates.js
+│ │ │ ├── studentHighlights.js
+│ │ │ └── ...
+│ │ ├── column2/ # Right-column widgets
+│ │ │ ├── meetings.js
+│ │ │ └── ...
+│ │ └── bottom/
+│ │ ├── inbox.js
+│ │ └── ...
+│ ├── meetings/ # Meetings frontend
+│ │ ├── meetings.html
+│ │ └── js/
+│ ├── students/ # Student frontend
+│ │ ├── students.html
+│ │ └── js/
+│ │ ├── api.js # API wrappers (students, attendance, payments, pricing)
+│ │ ├── app.js
+│ │ └── students/
+│ │ ├── addForm.js # Form with teacher packages, per-meeting teacher/rate
+│ │ ├── detailView.js # Detail modal with next invoice, attendance, payments
+│ │ └── list.js # Student cards with local time, next invoice, filters
+│ └── staff/ # Staff management & profiles
+│ ├── staff.html
+│ └── js/
+│ ├── api.js
+│ ├── profile.js # Own profile editing, availability
+│ └── ...
 ├── data/
-│   ├── meetings/
-│   │   └── meetings.db         # Meetings (unencrypted)
-│   ├── students/
-│   │   ├── index.db            # Central index (encrypted)
-│   │   └── {uuid}.sqlite       # Per-student encrypted DB
-│   ├── staff/
-│   │   ├── index.db            # Staff index (encrypted)
-│   │   └── databases/
-│   │       └── {uuid}.sqlite   # Per-staff encrypted DB
-│   ├── utils/
-│   │   └── timezone_data.json  # Generated timezone list
-│   ├── master_key.salt         # MEP salt
-│   ├── master_key.enc          # Encrypted master key
-│   └── certs/                  # SSL certificates (auto-generated)
-├── libs/                       # Portable Python packages (git-ignored)
+│ ├── meetings/
+│ │ └── meetings.db # Meetings (SQLite)
+│ ├── students/
+│ │ ├── index.db # Central index (encrypted)
+│ │ └── {uuid}.sqlite # Per-student encrypted DB
+│ ├── staff/
+│ │ ├── index.db # Staff index (encrypted)
+│ │ └── databases/
+│ │ └── {uuid}.sqlite # Per-staff encrypted DB
+│ ├── pricing/
+│ │ └── pricing.db # Package templates & base rates (encrypted)
+│ ├── utils/
+│ │ └── timezone_data.json
+│ ├── master_key.salt
+│ ├── master_key.enc
+│ └── certs/ # SSL certificates (auto-generated)
+├── libs/ # Portable Python packages (git-ignored)
 ├── generate_timezone_data.py
-├── check_student.py            # Debug script
-├── create_admin.py             # Admin account creation & approval script
+├── create_admin.py
 ├── README.md
 └── .gitignore
-How It Works
-Launch the App
-Open a terminal in the crm-app folder.
 
-Run: PYTHONPATH=./libs python3 main.py
+text
 
-Enter the Master Encryption Password (MEP) when prompted (first run sets it).
+## How It Works
 
-The server starts with HTTPS on https://localhost:8080 and opens the login page.
+### Launch the App
+1. Open a terminal in the `crm-app` folder.
+2. Run: `PYTHONPATH=./libs python3 main.py`
+3. Enter the Master Encryption Password (MEP) when prompted (first run sets it).
+4. The server starts with HTTPS on `https://localhost:8080` and opens the login page.
 
-Authentication Flow (current)
-First run: create_admin.py creates an admin staff account (inactive), then approves it with MEP.
+### Authentication Flow
+- First run: `create_admin.py` creates an admin staff account (inactive), then approves it with MEP.
+- Subsequent starts: MEP unlocks data; users log in with their staff username and password at `/launch/index.html`.
+- Session token stored in browser, expires after 60 min of inactivity.
+- Student pages use staff token; no separate student password needed.
+- Irreversible actions (e.g., delete student) still require MEP re-entry.
 
-Subsequent starts: MEP unlocks data; users log in with their staff username and password at /launch/index.html.
+### Meetings
+- Click “Meetings” from dashboard to view weekly calendar.
+- Add meetings with name, day, time, type, Jitsi link, students, rate, homework, comments.
+- Click a meeting name or the countdown number to join via Jitsi with low-bandwidth settings.
+- Edit or delete meetings using per-entry buttons.
+- Meetings can be linked to student packages; teacher dashboard filters by teacher.
 
-Session: Token stored in browser, expires after 60 min of inactivity.
+### Students
+- Access from dashboard; requires valid staff login.
+- Student list with search and filters (status, next invoice, payment status).
+- Add/Edit student form: per-meeting teacher/rate, load back‑office package templates to auto-fill fields.
+- Student card shows local time, next invoice (or primary reference for grouped accounts), meeting summary.
+- Click student card for detail view (attendance, payments, linked students, next invoice).
+- Attendance is now managed by the teacher coordinator (`/api/teacher/attendance`).
+- Payments are managed by the front‑office coordinator (`/api/frontoffice/payments`).
 
-Student access: Student page now reads staff token; no separate student password needed.
+### Back‑Office Pricing & Packages
+- Back‑office staff manage package templates in `pricing.db` via the pricing coordinator.
+- Templates include teacher, subject, type, lesson count, rate, schedule.
+- When adding a student, the form fetches templates for the selected teacher and auto-fills meeting rows.
+- On save, a package is created in the student's encrypted DB; `next_invoice` is calculated from active packages.
+- Linked students with invoice grouping show combined invoice on the primary account.
 
-Irreversible actions (e.g., delete student) still require MEP re-entry.
+### Staff Management (admin only)
+- Staff page accessible from admin dashboard.
+- Create new staff accounts (inactive by default).
+- Approve staff accounts (requires MEP).
+- Edit own profile, availability, holidays (teacher can submit, admin approves).
 
-Meetings
-Click "Meetings" from dashboard to view weekly calendar.
+### Dashboards
+- After login, the dashboard shell loads the role‑appropriate layout.
+- Admin can use the “View” menu to switch to any other role’s dashboard.
+- Teacher dashboard shows meetings for any day and a “Today’s Attendance” checklist (calls teacher attendance API).
+- Front‑office dashboard can jump to student creation or meetings view.
 
-Add meetings with name, day, time, type, Jitsi link, students, rate, homework, comments.
+## Installation & Setup
 
-Click a meeting name or the countdown number to join via Jitsi with low-bandwidth settings.
+### Prerequisites
+- Ubuntu-based Linux (tested on Linux Mint 22.3)
+- Python 3.12+
+- Brave or Firefox browser
+- System library: `libsqlcipher-dev`
 
-Edit or delete meetings using per-entry buttons.
+### One-time setup
+1. Copy the `crm-app` folder to your USB drive.
+2. Install system dependency:
+   ```bash
+   sudo apt install libsqlcipher-dev
+Navigate to the folder:
 
-Currently, meetings are stored independently from student profiles. Linking will be part of a future meeting system refactor.
-
-Students
-Access from dashboard; requires valid staff login.
-
-Student list with search and filters (status, rate range, payment status).
-
-Add/Edit student form with all fields as described above.
-
-Click student card for detail view (attendance, payments, linked students).
-
-Delete student: click "Delete", enter MEP to confirm.
-
-Staff Management (admin only)
-Staff page accessible from admin dashboard.
-
-Create new staff accounts (inactive by default).
-
-Approve staff accounts (requires MEP).
-
-Edit own profile, availability, holidays (UI in progress).
-
-Dashboards (new)
-After login, the dashboard shell loads the role‑appropriate layout.
-
-Admin can use the “View” menu to switch to any other role’s dashboard (teacher, front‑office, back‑office, bot, dev).
-
-The teacher dashboard shows meetings for any day (via day picker) and a “Today’s Attendance” checklist.
-
-Front‑office dashboard can jump to student creation or meetings view via the “View” menu.
-
-Other dashboards contain placeholder widgets for future features.
-
-Installation & Setup
-Prerequisites
-Ubuntu-based Linux (tested on Linux Mint 22.3)
-
-Python 3.12+
-
-Brave or Firefox browser
-
-System library: libsqlcipher-dev
-
-One-time setup
-Copy the crm-app folder to your USB drive.
-
-Install system dependency: sudo apt install libsqlcipher-dev
-
-Navigate to the folder: cd /path/to/crm-app
-
+bash
+cd /path/to/crm-app
 Create the portable library folder and install packages:
 
 bash
@@ -318,7 +300,7 @@ bash
 PYTHONPATH=./libs python3 main.py
 (Follow prompts to create the Master Encryption Password.)
 
-Install the generated local CA certificate into your system trust store:
+Install the generated local CA certificate:
 
 bash
 sudo cp data/certs/ca.crt /usr/local/share/ca-certificates/crm-ca.crt
@@ -346,7 +328,7 @@ Transport security: All traffic uses HTTPS with per-session server certificates 
 
 Authentication: Staff passwords hashed with scrypt. Session tokens expire after 60 min. MEP required for irreversible actions and staff approval.
 
-Encryption at rest: Student index and per-student DBs encrypted with unique keys, sealed by a master key. Staff index and per-staff DBs encrypted with the same master key. Master key stored in master_key.enc, encrypted with MEP (scrypt + AES‑GCM).
+Encryption at rest: Student index and per-student DBs encrypted with unique keys, sealed by a master key. Staff index, per-staff DBs, and pricing DB encrypted with the same master key. Master key stored in master_key.enc, encrypted with MEP (scrypt + AES‑GCM).
 
 No internet connection required: Everything runs locally; no data leaves the USB drive.
 
@@ -377,13 +359,13 @@ Student list view with search and filters
 
 Full student profile (contacts, meetings, goals, comments)
 
-Attendance logging
+Attendance logging (teacher domain)
 
-Payment records (manual entry)
+Payment records (front‑office domain)
 
 Global action items
 
-Student linking (family/siblings)
+Student linking (family/siblings) with invoice grouping
 
 Multi-value contact fields
 
@@ -403,13 +385,13 @@ Dashboard shell with role-based views (complete)
 
 Teacher dropdown, birthdate, group meeting selector in student form (complete)
 
-Meeting auto-creation on student add (complete)
+Back‑office pricing module with package templates
 
-Unified inbox stub (future: Eisenhower matrix)
+Per-meeting teacher/rate, package auto‑fill
 
-Attendance widget (teacher dashboard) – ready for backend wiring
+Next invoice calculation from active packages
 
-Meeting–student integration (completed via auto-creation; future refactor for multi-day packages)
+Domain‑separated coordinators (Student, Teacher, Front‑Office, Back‑Office)
 
 Phase 3: Telegram Bot
 Deploy bot to Render (free tier)
@@ -423,7 +405,7 @@ Scheduling assistance
 Phase 4: Analytics
 Attendance reports
 
-Revenue summaries
+Revenue summaries per teacher/package
 
 Export to CSV/PDF
 
@@ -446,15 +428,8 @@ Render (future)	$0
 Total	$0
 Git Workflow
 bash
-# See status
 git status
-
-# Stage all changes (libs/ is ignored)
 git add -A
-
-# Commit
 git commit -m "Description"
-
-# Push to GitHub
 git push origin main
 Private project – built for teachers in Myanmar with limited internet connectivity.

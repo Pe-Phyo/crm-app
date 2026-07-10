@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package Templates</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../students/css/styles.css">
+</head>
+<body>
+    <div class="header" style="display:flex; align-items:center;">
+        <h1>Package Templates</h1>
+        <div style="margin-left:auto; display:flex; gap:0.5rem;">
+            <button id="addTemplateBtn" class="btn btn-primary">+ Add Template</button>
+            <button id="backBtn" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <select id="teacherFilter" style="min-width:200px;">
+            <option value="">All Teachers</option>
+        </select>
+        <button id="applyFilterBtn" class="btn btn-secondary">Load</button>
+    </div>
+
+    <div id="templatesList"></div>
+
+    <!-- Detail Modal (read‑only) -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal" style="max-width:700px; max-height:90vh; overflow-y:auto;">
+            <div id="detailContent"></div>
+            <button id="closeDetailBtn" class="btn btn-secondary" style="margin-top:15px;">Close</button>
+        </div>
+    </div>
+
+    <!-- Add / Edit Form Modal -->
+    <div class="modal-overlay" id="templateFormModal">
+        <div class="modal" style="max-width:700px; max-height:90vh; overflow-y:auto;">
+            <h2 id="formModalTitle">Add Template</h2>
+            <form id="templateForm">
+                <input type="hidden" id="templateId">
+                <fieldset class="form-section">
+                    <legend>Template Details</legend>
+                    <label for="formTeacher">Teacher *</label>
+                    <select id="formTeacher" required>
+                        <option value="">-- Select --</option>
+                    </select>
+
+                    <label for="formName">Package Name *</label>
+                    <input type="text" id="formName" required>
+
+                    <label for="formType">Type *</label>
+                    <select id="formType" required>
+                        <option value="private">Private</option>
+                        <option value="group">Group</option>
+                    </select>
+
+                    <label for="formLessonCount">Lesson Count *</label>
+                    <input type="number" id="formLessonCount" min="1" value="4" required>
+
+                    <label for="formRate">Default Rate (MMK) *</label>
+                    <input type="number" id="formRate" step="100" value="0" required>
+
+                    <label for="formSubject">Subject</label>
+                    <input type="text" id="formSubject">
+
+                    <label for="formBillingCycle">Billing Cycle</label>
+                    <select id="formBillingCycle">
+                        <option value="monthly">Monthly</option>
+                        <option value="one-time">One‑time</option>
+                        <option value="per-lesson">Per Lesson</option>
+                    </select>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend>Schedule</legend>
+                    <div id="scheduleEntries"></div>
+                    <button type="button" id="addScheduleRowBtn" class="btn btn-secondary btn-sm">+ Add Day/Time</button>
+                </fieldset>
+
+                <div class="modal-actions" style="margin-top:20px;">
+                    <button type="button" class="btn btn-secondary" id="cancelFormBtn">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

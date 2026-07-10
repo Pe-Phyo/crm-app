@@ -3,6 +3,7 @@ export default {
     layout: '1fr 1fr',
     eyeMenu: [
         { label: 'Staff Management', action: '/launch/staff/staff.html' },
+        { label: 'Pricing', action: '/launch/backoffice/pricing.html' },
         { label: 'Financials', action: '#' },
         { label: 'Payroll & Expenses', action: '#' },
         { label: 'Student View', action: '#' },

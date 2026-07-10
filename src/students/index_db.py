@@ -93,7 +93,7 @@ def setup_index_db(data_dir: str, password: str):
 def open_index_db_with_key(data_dir: str, key: bytes):
     db_path = os.path.join(data_dir, DB_FILE)
     conn = open_encrypted_db(db_path, key)
-    _create_tables(conn)         # ensure tables including flag column
+    _create_tables(conn)         # ensure tables including new columns
     conn.commit()
     return conn
 
@@ -120,7 +120,11 @@ def _create_tables(conn):
             meeting_times_summary TEXT DEFAULT '',
             status TEXT DEFAULT 'active',
             db_key BLOB NOT NULL,
-            flag TEXT DEFAULT ''
+            flag TEXT DEFAULT '',
+            timezone TEXT DEFAULT '',
+            teacher_id TEXT DEFAULT '',
+            next_invoice INTEGER DEFAULT 0,
+            invoice_reference TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS auth (
             id INTEGER PRIMARY KEY,
@@ -141,7 +145,7 @@ def _create_tables(conn):
             created TEXT NOT NULL
         );
     """)
-    # Add flag column if missing (for existing databases)
+    # Add columns that might be missing in older databases (safe to run each time)
     try:
         conn.execute("ALTER TABLE students ADD COLUMN flag TEXT DEFAULT ''")
     except:
@@ -154,6 +158,14 @@ def _create_tables(conn):
         conn.execute("ALTER TABLE students ADD COLUMN teacher_id TEXT DEFAULT ''")
     except:
         pass
+    try:
+        conn.execute("ALTER TABLE students ADD COLUMN next_invoice INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE students ADD COLUMN invoice_reference TEXT DEFAULT ''")
+    except:
+        pass
 
 # ------------------------------------------------------------
 # Student summaries
@@ -161,15 +173,15 @@ def _create_tables(conn):
 def add_student_summary(conn, uuid: str, name: str, location: str, timezone: str, rate: int,
                         last_payment_date: str, attendance_percentage: float,
                         meeting_times_summary: str, status: str, db_key: bytes,
-                        flag: str = '', teacher_name: str = ''):
+                        flag: str = '', next_invoice: int = 0, invoice_reference: str = ''):
     conn.execute(
-        "INSERT INTO students (uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key, flag, flag) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-        (uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key, flag)
+        "INSERT INTO students (uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key, flag, next_invoice, invoice_reference) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, db_key, flag, next_invoice, invoice_reference)
     )
     conn.commit()
 
 def update_student_summary(conn, uuid: str, **kwargs):
-    allowed = {'name', 'location', 'timezone', 'rate', 'last_payment_date', 'attendance_percentage', 'meeting_times_summary', 'status', 'flag'}
+    allowed = {'name', 'location', 'timezone', 'rate', 'last_payment_date', 'attendance_percentage', 'meeting_times_summary', 'status', 'flag', 'next_invoice', 'invoice_reference'}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return
@@ -183,7 +195,7 @@ def delete_student_summary(conn, uuid: str):
     conn.commit()
 
 def get_all_students(conn) -> List[Dict]:
-    cursor = conn.execute("SELECT uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, flag FROM students ORDER BY last_payment_date DESC")
+    cursor = conn.execute("SELECT uuid, name, location, timezone, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, flag, next_invoice, invoice_reference FROM students ORDER BY last_payment_date DESC")
     rows = cursor.fetchall()
     students = []
     for row in rows:
@@ -197,12 +209,14 @@ def get_all_students(conn) -> List[Dict]:
             'attendance_percentage': row[6],
             'meeting_times_summary': row[7],
             'status': row[8],
-            'flag': row[9] if len(row) > 9 else ''
+            'flag': row[9] if len(row) > 9 else '',
+            'next_invoice': row[10] if len(row) > 10 else 0,
+            'invoice_reference': row[11] if len(row) > 11 else ''
         })
     return students
 
 def get_student_summary(conn, uuid: str) -> Optional[Dict]:
-    cursor = conn.execute("SELECT uuid, name, location, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, flag FROM students WHERE uuid=?", (uuid,))
+    cursor = conn.execute("SELECT uuid, name, location, rate, last_payment_date, attendance_percentage, meeting_times_summary, status, flag, next_invoice, invoice_reference FROM students WHERE uuid=?", (uuid,))
     row = cursor.fetchone()
     if row is None:
         return None
@@ -215,7 +229,9 @@ def get_student_summary(conn, uuid: str) -> Optional[Dict]:
         'attendance_percentage': row[5],
         'meeting_times_summary': row[6],
         'status': row[7],
-        'flag': row[8] if len(row) > 8 else ''
+        'flag': row[8] if len(row) > 8 else '',
+        'next_invoice': row[9] if len(row) > 9 else 0,
+        'invoice_reference': row[10] if len(row) > 10 else ''
     }
 
 def get_student_db_key(conn, uuid: str) -> Optional[bytes]:

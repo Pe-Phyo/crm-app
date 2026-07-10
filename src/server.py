@@ -19,6 +19,9 @@ from .students.coordinator import StudentCoordinator
 from . import crypto_engine
 from .staff.coordinator import StaffCoordinator
 from .dashboard.coordinator import DashboardCoordinator
+from .teachers.coordinator import TeacherCoordinator
+from .frontoffice.coordinator import FrontOfficeCoordinator
+from .backoffice.pricing.coordinator import PricingCoordinator
 from urllib.parse import parse_qs
 
 PORT = 8080
@@ -99,6 +102,9 @@ class RequestHandler(SimpleHTTPRequestHandler):
     student_coordinator = None
     staff_coordinator = None
     dashboard_coordinator = None
+    teacher_coordinator = None
+    frontoffice_coordinator = None
+    pricing_coordinator = None
 
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -123,7 +129,6 @@ class RequestHandler(SimpleHTTPRequestHandler):
             if self.dashboard_coordinator:
                 rel_path = path[len('/api'):]
                 headers = {k: v for k, v in self.headers.items()}
-                # Extract query string from the full request path
                 query = urlparse(self.path).query
                 return self.dashboard_coordinator.handle(method, rel_path, body, headers, query=query)
 
@@ -150,7 +155,6 @@ class RequestHandler(SimpleHTTPRequestHandler):
 
         # Staff API
         if path.startswith('/api/auth/staff'):
-            # Map /api/auth/staff/login → /auth/login, etc.
             sub = path[len('/api/auth/staff'):]
             if not sub.startswith('/'):
                 sub = '/' + sub
@@ -164,7 +168,31 @@ class RequestHandler(SimpleHTTPRequestHandler):
                 headers = {k: v for k, v in self.headers.items()}
                 return self.staff_coordinator.handle(method, rel_path, body, headers)
 
-        # Student API
+        # Teacher API (attendance)
+        if path.startswith('/api/teacher'):
+            if self.teacher_coordinator:
+                rel_path = path[len('/api'):]
+                headers = {k: v for k, v in self.headers.items()}
+                query = urlparse(self.path).query
+                return self.teacher_coordinator.handle(method, rel_path, body, headers, query=query)
+
+        # FrontOffice API (payments)
+        if path.startswith('/api/frontoffice'):
+            if self.frontoffice_coordinator:
+                rel_path = path[len('/api'):]
+                headers = {k: v for k, v in self.headers.items()}
+                query = urlparse(self.path).query
+                return self.frontoffice_coordinator.handle(method, rel_path, body, headers, query=query)
+
+        # Pricing API (package templates)                    ← add this block
+        if path.startswith('/api/pricing'):
+            if self.pricing_coordinator:
+                rel_path = path[len('/api'):]
+                headers = {k: v for k, v in self.headers.items()}
+                query = urlparse(self.path).query
+                return self.pricing_coordinator.handle(method, rel_path, body, headers, query=query)
+
+        # Student API (profile only) and legacy actions (we keep actions here for now)
         if path.startswith('/api/auth') or path.startswith('/api/students') or path.startswith('/api/actions'):
             if self.student_coordinator:
                 rel_path = path[len('/api'):]
@@ -174,7 +202,7 @@ class RequestHandler(SimpleHTTPRequestHandler):
         return {'error': 'Not found'}, 404
 
     def _get_locations(self):
-        import json, os
+        import json
         loc_file = os.path.join(DATA_DIR, 'utils', 'timezone_data.json')
         if not os.path.exists(loc_file):
             return {'error': 'Location data missing'}, 500
@@ -282,7 +310,7 @@ def start():
     from .meetings.db import init_db
     init_db()
 
-    # Init student coordinator
+    # Init student coordinator (profile only)
     os.makedirs(STUDENT_DATA_DIR, exist_ok=True)
     student_coordinator = StudentCoordinator(
         STUDENT_DATA_DIR,
@@ -291,13 +319,33 @@ def start():
     )
     RequestHandler.student_coordinator = student_coordinator
 
-        # Init staff coordinator
+    # Init staff coordinator
     staff_coordinator = StaffCoordinator(DATA_DIR)
     RequestHandler.staff_coordinator = staff_coordinator
 
     # Dashboard coordinator
     dashboard_coordinator = DashboardCoordinator()
     RequestHandler.dashboard_coordinator = dashboard_coordinator
+
+    # Teacher coordinator (attendance)
+    teacher_coordinator = TeacherCoordinator(
+        DATA_DIR,
+        crypto_engine.get_master_key(),
+        root_data_dir=DATA_DIR
+    )
+    RequestHandler.teacher_coordinator = teacher_coordinator
+
+    # Pricing coordinator (package templates)
+    pricing_coordinator = PricingCoordinator()
+    RequestHandler.pricing_coordinator = pricing_coordinator
+
+    # FrontOffice coordinator (payments)
+    frontoffice_coordinator = FrontOfficeCoordinator(
+        DATA_DIR,
+        crypto_engine.get_master_key(),
+        root_data_dir=DATA_DIR
+    )
+    RequestHandler.frontoffice_coordinator = frontoffice_coordinator
 
     # SSL context
     ssl_context = generate_ssl_context()

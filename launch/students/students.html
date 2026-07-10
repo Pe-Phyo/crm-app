@@ -6,12 +6,13 @@
     <link rel="stylesheet" href="../css/styles.css"><link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Students</h1>
-            <div>
-                <button id="backBtn" class="btn btn-secondary">Back</button>
-            </div>
+    <div class="header" style="display: flex; align-items: center;">
+        <h1>Students</h1>
+        <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+            <button id="addStudentBtn" class="btn btn-primary">+ Add Student</button>
+            <button id="backBtn" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
         </div>
 
         <!-- Main dashboard -->
@@ -35,19 +36,7 @@
 
             <div class="panel-layout">
                 <div class="main-panel">
-                    <div class="panel-header">
-                        <h3>Active Students</h3>
-                        <button id="addStudentBtn" class="btn btn-primary">+ Add Student</button>
-                    </div>
                     <div id="studentList"></div>
-                </div>
-                <div class="side-panel">
-                    <h3>Action Items</h3>
-                    <div id="actionItems"></div>
-                    <h3 style="margin-top:20px;">Available Slots</h3>
-                    <div class="placeholder-box">Coming soon</div>
-                    <h3 style="margin-top:20px;">Telegram</h3>
-                    <div class="placeholder-box">Coming soon</div>
                 </div>
             </div>
         </div>
@@ -62,76 +51,73 @@
                     <!-- Section 1+2: Profile & Contacts -->
                     <fieldset class="form-section">
                         <legend>Profile</legend>
-                        <label>Full Name *</label>
-                        <input type="text" name="name" required>
+                        <label for="studentName">Full Name</label>
+                        <input type="text" id="studentName" name="name" required>
 
-                        <label>Birthdate</label>
-                        <input type="date" name="birthdate">
+                        <label for="birthdate">Birthdate</label>
+                        <input type="date" id="birthdate" name="birthdate">
 
-                        <label>Age Group *</label>
+                        <label for="ageGroupSelect">Age Group *</label>
                         <select name="age_group" id="ageGroupSelect">
                             <option value="Adult">Adult</option>
                             <option value="Young Adult">Young Adult</option>
                             <option value="Child">Child</option>
                         </select>
 
-                        <label>Location / Timezone</label>
+                        <label for="timezoneSelect">Location / Timezone</label>
                         <select name="timezone" id="timezoneSelect">
                             <option value="">-- Select --</option>
                         </select>
 
-                        <label>Teacher *</label>
-                        <select name="teacher_id" id="teacherSelect" required>
-                            <option value="">-- Select --</option>
-                        </select>
+                        <!-- Teacher and rate moved to per-meeting section -->
 
-                        <label>Phone Numbers</label>
+                        <label for="phone1">Phone Numbers</label>
                         <div id="phoneNumbersContainer">
                             <div class="multi-input-row">
-                                <input type="text" class="phone-input" placeholder="+95 9 123 456 789">
+                                <input type="text" id="phone1" name="phone1" class="phone-input" placeholder="+95 9 123 456 789">
                                 <button type="button" class="add-multi-btn">+</button>
                             </div>
                         </div>
 
-                        <label>Email Addresses</label>
+                        <label for="email1">Email Addresses</label>
                         <div id="emailsContainer">
                             <div class="multi-input-row">
-                                <input type="email" class="email-input" placeholder="student@example.com">
+                                <input type="email" id="email1" name="email1" class="email-input" placeholder="student@example.com">
                                 <button type="button" class="add-multi-btn">+</button>
                             </div>
                         </div>
 
-                        <label>Telegram</label>
-                        <input type="text" name="telegram" placeholder="@username">
+                        <label for="telegram">Telegram</label>
+                        <input type="text" id="telegram" name="telegram" placeholder="@username">
                     </fieldset>
 
                     <!-- 2a: Minor Info (hidden by default) -->
                     <fieldset class="form-section" id="minorInfoSection" style="display:none;">
                         <legend>Guardian & School</legend>
-                        <label>Parent/Guardian Name *</label>
-                        <input type="text" name="parent_name">
+                        <label for="parentName">Parent/Guardian Name *</label>
+                        <input type="text" id="parentName" name="parent_name">
 
-                        <label>Parent Phone</label>
+                        <label for="parentPhone1">Parent Phone</label>
                         <div id="parentPhonesContainer">
                             <div class="multi-input-row">
-                                <input type="text" class="parent-phone-input" placeholder="+95 9 987 654 321">
+                                <input type="text" id="parentPhone1" name="parentPhone1" class="parent-phone-input" placeholder="+95 9 987 654 321">
                                 <button type="button" class="add-multi-btn">+</button>
                             </div>
                         </div>
 
-                        <label>Parent Email</label>
+                        <label for="parentEmail1">Parent Email</label>
                         <div id="parentEmailsContainer">
                             <div class="multi-input-row">
-                                <input type="email" class="parent-email-input" placeholder="parent@example.com">
+                                <input type="email" id="parentEmail1" name="parentEmail1" class="parent-email-input" placeholder="parent@example.com">
                                 <button type="button" class="add-multi-btn">+</button>
                             </div>
                         </div>
 
-                        <label>School Name</label>
-                        <input type="text" name="school_name">
+                        <label for="schoolName">School Name</label>
+                        <input type="text" id="schoolName" name="school_name">
 
-                        <label>Grade / Academic Year</label>
-                        <input type="text" name="academic_year">
+                        <label for="academicYear">Grade / Academic Year</label>
+                        <input type="text" id="academicYear" name="academic_year">
                     </fieldset>
 
                     <!-- 2b: Linked Students -->
@@ -139,61 +125,68 @@
                         <legend>Linked Students (Family/Siblings)</legend>
                         <div id="linkedStudentsList"></div>
                         <div class="link-student-row">
-                            <select id="linkStudentSelect">
+                            <select id="linkStudentSelect" name="link_student">
                                 <option value="">-- Select student --</option>
                             </select>
-                            <select id="relationshipType">
+                            <select id="relationshipType" name="relationship_type">
                                 <option value="Parent">Parent</option>
                                 <option value="Child">Child</option>
                                 <option value="Sibling">Sibling</option>
                                 <option value="Spouse">Spouse</option>
                                 <option value="Other">Other</option>
                             </select>
-                            <label style="display:flex;align-items:center;font-size:12px;">
-                                <input type="checkbox" id="invoiceGroupCheck"> Group for invoicing
+                            <label for="invoiceGroupCheck" style="display:flex;align-items:center;font-size:12px;">
+                                <input type="checkbox" id="invoiceGroupCheck" name="invoice_group"> Group for invoicing
                             </label>
                             <button type="button" id="addLinkBtn" class="btn btn-secondary">Link</button>
                         </div>
                     </fieldset>
 
-                    <!-- Section 3: Rate -->
-                    <fieldset class="form-section">
-                        <legend>Rate</legend>
-                        <label>Rate per lesson (MMK) *</label>
-                        <input type="number" name="rate" required>
-                    </fieldset>
-
-                    <!-- Section 4: Meeting Times -->
+                    <!-- Section 4: Meeting Times (now includes teacher & rate per meeting) -->
                     <fieldset class="form-section">
                         <legend>Meeting Times</legend>
                         <div id="meetingTimesList"></div>
 
                         <div id="groupMeetingContainer"></div>  <!-- group dropdown inserted here -->
 
-                        <label>Meeting Name</label>
+                        <label for="meetingName">Meeting Name</label>
                         <input type="text" id="meetingName" placeholder="e.g., Math Group A">
 
-                        <label>Day</label>
+                        <label for="meetingDay">Day</label>
                         <select id="meetingDay">
                             <option>Sunday</option><option>Monday</option><option>Tuesday</option>
                             <option>Wednesday</option><option>Thursday</option><option>Friday</option>
                             <option>Saturday</option>
                         </select>
 
-                        <label>Time</label>
+                        <label for="meetingTime">Time</label>
                         <input type="time" id="meetingTime" value="09:00">
 
-                        <label>Type</label>
+                        <label for="meetingType">Type</label>
                         <select id="meetingType">
                             <option value="private">Private</option>
                             <option value="group">Group</option>
                         </select>
 
-                        <label>In‑person</label>
+                        <label for="meetingInPerson">In‑person</label>
                         <input type="checkbox" id="meetingInPerson" style="width:auto;">
 
-                        <label>Meeting Link</label>
+                        <label for="meetingLink">Meeting Link</label>
                         <input type="text" id="meetingLink" placeholder="Will auto‑fill based on name" style="margin-bottom:10px;">
+
+                        <!-- Per-meeting teacher and rate -->
+                        <label for="mtTeacherSelect">Teacher for this meeting</label>
+                        <select id="mtTeacherSelect">
+                            <option value="">-- Select --</option>
+                        </select>
+
+                        <label for="mtRate">Rate for this meeting (MMK)</label>
+                        <input type="number" id="mtRate" value="0" min="0">
+
+                        <button type="button" id="loadPackagesBtn" class="btn btn-secondary" style="margin-top:5px;">Load Teacher Packages</button>
+                        <select id="packageTemplateSelect" style="display:none; margin-top:5px;">
+                            <option value="">-- Select package --</option>
+                        </select>
 
                         <button type="button" id="addMeetingBtn" class="btn btn-primary">+ Add Meeting</button>
                     </fieldset>
@@ -201,10 +194,10 @@
                     <!-- Section 6: Goals & Notes -->
                     <fieldset class="form-section">
                         <legend>Goals & Notes</legend>
-                        <label>Educational Goals</label>
-                        <textarea name="educational_goals" rows="3"></textarea>
-                        <label>General Comments</label>
-                        <textarea name="general_comments" rows="3"></textarea>
+                        <label for="educationalGoals">Educational Goals</label>
+                        <textarea id="educationalGoals" name="educational_goals" rows="3"></textarea>
+                        <label for="generalComments">General Comments</label>
+                        <textarea id="generalComments" name="general_comments" rows="3"></textarea>
                     </fieldset>
 
                     <div class="modal-actions" style="margin-top:20px;">
@@ -226,4 +219,3 @@
 
     <script type="module" src="js/app.js"></script>
 </body>
-</html>
