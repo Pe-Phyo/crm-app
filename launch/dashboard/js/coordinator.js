@@ -19,6 +19,12 @@ const WIDGET_PATH_MAP = {
     addFinances:       './widgets/bottom/addFinances.js',
     activityLog:       './widgets/bottom/activityLog.js',
     apiConsole:        './widgets/bottom/apiConsole.js',
+    profileTabs:        null, // handled via config, not a separate file
+    profileUpcomingDates: './widgets/column1/profileUpcomingDates.js',
+    wellness:           './widgets/column1/wellness.js',
+    quickLinks:         './widgets/column1/quickLinks.js',
+    profileSummary:     './widgets/column2/profileSummary.js',
+    recentActivity:     './widgets/column2/recentActivity.js',
 };
 
 const widgetRegistry = {};

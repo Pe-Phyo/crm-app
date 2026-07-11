@@ -74,5 +74,14 @@ class DashboardCoordinator:
         """
         Dynamically import src.staff.<role>.widgets.<widget_name>.
         """
-        module_path = f'..staff.{role}.widgets.{widget_name}'
+        ROLE_MODULE_MAP = {
+            'admin': 'admin',
+            'back_office': 'backoffice',
+            'bot': 'bots',
+            'dev': 'dev',
+            'front_office': 'frontoffice',
+            'teacher': 'teachers',
+        }
+        module_name = ROLE_MODULE_MAP.get(role, role)
+        module_path = f'..{module_name}.widgets.{widget_name}'
         return importlib.import_module(module_path, package=__package__)
