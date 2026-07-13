@@ -22,6 +22,7 @@ def create_staff_index(root_data_dir: str):
     master_key = get_master_key()
     conn = create_encrypted_db(db_path, master_key)
     _create_tables(conn)
+    _migrate_index_schema(conn)
     conn.commit()
     conn.close()
 
@@ -43,20 +44,40 @@ def _create_tables(conn):
             username TEXT NOT NULL UNIQUE,
             role TEXT NOT NULL,
             is_active INTEGER DEFAULT 0,
-            db_key BLOB NOT NULL
+            db_key BLOB NOT NULL,
+            profile_db_key BLOB
         );
     """)
 
-def add_staff_summary(conn, uuid: str, username: str, role: str, db_key: bytes, is_active: bool = False):
+def _migrate_index_schema(conn):
+    """Add profile_db_key column if it doesn't exist (safe for older DBs)."""
+    try:
+        conn.execute("ALTER TABLE staff ADD COLUMN profile_db_key BLOB")
+        conn.commit()
+    except:
+        pass  # Column already exists
+
+def add_staff_summary(conn, uuid: str, username: str, role: str, db_key: bytes, is_active: bool = False, profile_db_key: bytes = None):
     conn.execute(
-        "INSERT INTO staff (uuid, username, role, is_active, db_key) VALUES (?,?,?,?,?)",
-        (uuid, username, role, 1 if is_active else 0, db_key)
+        "INSERT INTO staff (uuid, username, role, is_active, db_key, profile_db_key) VALUES (?,?,?,?,?,?)",
+        (uuid, username, role, 1 if is_active else 0, db_key, profile_db_key)
     )
     conn.commit()
 
 def get_staff_summary(conn, uuid: str) -> Optional[Dict]:
-    cursor = conn.execute("SELECT uuid, username, role, is_active, db_key FROM staff WHERE uuid=?", (uuid,))
-    row = cursor.fetchone()
+    try:
+        cursor = conn.execute(
+            "SELECT uuid, username, role, is_active, db_key, profile_db_key FROM staff WHERE uuid=?",
+            (uuid,)
+        )
+        row = cursor.fetchone()
+    except:
+        # Fallback for old index without profile_db_key
+        cursor = conn.execute(
+            "SELECT uuid, username, role, is_active, db_key FROM staff WHERE uuid=?",
+            (uuid,)
+        )
+        row = cursor.fetchone()
     if row is None:
         return None
     return {
@@ -64,8 +85,13 @@ def get_staff_summary(conn, uuid: str) -> Optional[Dict]:
         'username': row[1],
         'role': row[2],
         'is_active': bool(row[3]),
-        'db_key': row[4]
+        'db_key': row[4],
+        'profile_db_key': row[5] if len(row) > 5 else None
     }
+
+def update_staff_profile_key(conn, uuid, profile_db_key):
+    conn.execute("UPDATE staff SET profile_db_key = ? WHERE uuid = ?", (profile_db_key, uuid))
+    conn.commit()
 
 def get_staff_by_username(conn, username: str) -> Optional[Dict]:
     cursor = conn.execute("SELECT uuid, username, role, is_active, db_key FROM staff WHERE username=?", (username,))

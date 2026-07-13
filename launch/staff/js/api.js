@@ -50,3 +50,15 @@ export async function getStaffProfile(uuid) {
 export async function updateStaffProfile(uuid, data) {
     return await apiCall('PUT', `/staff/${uuid}`, data);
 }
+
+export async function getCapabilitiesSchema() {
+    return await apiCall('GET', '/staff/me/capabilities/schema');
+}
+
+export async function getMyCapabilities() {
+    return await apiCall('GET', '/staff/me/capabilities');
+}
+
+export async function updateMyCapabilities(data) {
+    return await apiCall('PUT', '/staff/me/capabilities', data);
+}

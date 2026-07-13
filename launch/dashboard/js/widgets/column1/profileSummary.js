@@ -1,4 +1,5 @@
 import { apiCall } from '../../api.js';
+import { openProfileModal } from '../../../../profile/js/modal.js';
 
 export async function render(container, widgetDef) {
     container.innerHTML = '<p>Loading profile...</p>';
@@ -28,7 +29,12 @@ export async function render(container, widgetDef) {
             <p><strong>Rate:</strong> ${rate}</p>
             <p><strong>Bio:</strong> ${escapeHtml(bio)}</p>
         </div>
+        <button id="profileSummaryEditBtn" class="btn btn-primary" style="margin-top:10px;">Edit Profile</button>
     `;
+
+    document.getElementById('profileSummaryEditBtn').addEventListener('click', () => {
+        openProfileModal(profile);
+    });
 }
 
 function escapeHtml(text) {

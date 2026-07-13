@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from src.crypto_engine import unlock, get_master_key, verify_mep
 from src.staff.index_db import create_staff_index
-from src.staff.coordinator import StaffCoordinator
+from src.staff.management import handle_create_staff, handle_approve_staff
 
 ROOT_DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -22,7 +22,6 @@ def main():
 
     # Recreate fresh staff index
     create_staff_index(ROOT_DATA_DIR)
-    coordinator = StaffCoordinator(ROOT_DATA_DIR)
 
     # Create admin with known password
     username = "admin"
@@ -34,19 +33,19 @@ def main():
         "role": "admin",
         "full_name": full_name
     })
-    result, status = coordinator._create_staff(body)
+    result, status = handle_create_staff(ROOT_DATA_DIR, body)
     if status != 201:
         print("Creation failed:", result)
         sys.exit(1)
 
     uuid = result['uuid']
-    # Approve with the MEP already in memory (we don't need to re‑prompt, we can just use verify_mep with a dummy? No, approve expects MEP password string. We can prompt once.)
+    # Approve with MEP
     mep = getpass.getpass("Enter MEP one more time to approve admin: ")
     if not verify_mep(ROOT_DATA_DIR, mep):
         print("Wrong MEP.")
         sys.exit(1)
     app_body = json.dumps({"mep_password": mep})
-    app_result, app_status = coordinator._approve_staff(uuid, app_body)
+    app_result, app_status = handle_approve_staff(ROOT_DATA_DIR, uuid, app_body)
     if app_status == 200:
         print(f"✅ Admin created and approved.")
         print(f"   Username: admin")

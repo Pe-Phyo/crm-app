@@ -19,12 +19,12 @@ const WIDGET_PATH_MAP = {
     addFinances:       './widgets/bottom/addFinances.js',
     activityLog:       './widgets/bottom/activityLog.js',
     apiConsole:        './widgets/bottom/apiConsole.js',
-    profileTabs:        null, // handled via config, not a separate file
-    profileUpcomingDates: './widgets/column1/profileUpcomingDates.js',
-    wellness:           './widgets/column1/wellness.js',
-    quickLinks:         './widgets/column1/quickLinks.js',
-    profileSummary:     './widgets/column2/profileSummary.js',
-    recentActivity:     './widgets/column2/recentActivity.js',
+    profileSummary:   './widgets/column1/profileSummary.js',
+    profileUpcoming:  './widgets/column1/profileUpcoming.js',
+    profileWellness:  './widgets/column2/profileWellness.js',
+    profileActivity:  './widgets/column2/profileActivity.js',
+    quickLinks:       './widgets/column2/quickLinks.js',
+    timeOff:          './widgets/bottom/timeOff.js',
 };
 
 const widgetRegistry = {};
@@ -108,6 +108,17 @@ async function boot() {
             <p>Could not load config for role <strong>${role}</strong>.</p>
             <p>File needed: <code>launch/dashboard/js/dashboards/${role}.js</code></p>
         </div>`;
+        return;
+    }
+
+    // ----- Profile dashboard support -----
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('view') === 'profile') {
+        sessionStorage.setItem('view_as_role', 'profile');
+        // Clean the URL so ?view=profile won't persist after logout/login
+        window.history.replaceState({}, '', '/launch/dashboard/dashboard.html?view_as=profile');
+        // Reload to apply the new view_as_role
+        window.location.reload();
         return;
     }
 

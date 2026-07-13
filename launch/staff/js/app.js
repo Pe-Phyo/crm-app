@@ -39,16 +39,18 @@ async function init() {
         document.getElementById('ownProfile').style.display = 'block';
         renderOwnProfile(myProfile);
     } else {
+        // Show management view and wire the Add Staff button
         document.getElementById('addStaffBtn').style.display = 'inline-block';
         document.getElementById('managementView').style.display = 'block';
+        document.getElementById('addStaffBtn').addEventListener('click', openAddStaffForm);
         currentStaff = await getStaffDetailed();
         renderStaffList(currentStaff, openStaffDetail);
         bindFilterEvents(currentStaff, renderStaffList, openStaffDetail);
     }
 
+    // Close button for the detail modal (no longer wires Add Staff)
     document.getElementById('closeDetailBtn').addEventListener('click', () => {
         document.getElementById('detailModal').classList.remove('active');
-        document.getElementById('addStaffBtn').addEventListener('click', openAddStaffForm);
     });
 }
 

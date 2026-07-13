@@ -1,5 +1,8 @@
 import { escapeHtml } from '../../students/js/utils/helpers.js';
-import { updateMyProfile, getMyAvailability, updateMyAvailability } from './api.js';
+import {
+    getMyAvailability,
+    updateMyAvailability
+} from './api.js';
 
 export async function renderOwnProfile(profile) {
     const container = document.getElementById('ownProfile');
@@ -15,7 +18,6 @@ export async function renderOwnProfile(profile) {
             <p><strong>Timezone:</strong> ${profile.timezone || '—'}</p>
             <p><strong>Rate:</strong> ${profile.default_hourly_rate || 0} K</p>
             <p><strong>Bio:</strong> ${profile.bio || '—'}</p>
-            <button id="editOwnProfileBtn" class="btn btn-primary">Edit Profile</button>
         </div>
         <div class="availability-section" style="margin-top:20px;">
             <h3>Availability</h3>
@@ -23,46 +25,6 @@ export async function renderOwnProfile(profile) {
             <button id="editAvailabilityBtn" class="btn btn-secondary">Edit Availability</button>
         </div>
     `;
-
-    document.getElementById('editOwnProfileBtn').addEventListener('click', () => {
-        const editHtml = `
-            <form id="editOwnForm">
-                <label>Full Name</label>
-                <input type="text" name="full_name" value="${escapeHtml(profile.full_name || '')}">
-                <label>Display Name</label>
-                <input type="text" name="display_name" value="${escapeHtml(profile.display_name || '')}">
-                <label>Email</label>
-                <input type="email" name="email" value="${escapeHtml(profile.email || '')}">
-                <label>Phone</label>
-                <input type="text" name="phone" value="${escapeHtml(profile.phone || '')}">
-                <label>Timezone</label>
-                <input type="text" name="timezone" value="${escapeHtml(profile.timezone || '')}">
-                <label>Rate (MMK)</label>
-                <input type="number" name="default_hourly_rate" value="${profile.default_hourly_rate || 0}">
-                <label>Bio</label>
-                <textarea name="bio">${escapeHtml(profile.bio || '')}</textarea>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" id="cancelOwnEditBtn">Cancel</button>
-                    <button type="submit" class="btn btn-success">Save</button>
-                </div>
-            </form>
-        `;
-        container.innerHTML = editHtml;
-        document.getElementById('cancelOwnEditBtn').addEventListener('click', () => renderOwnProfile(profile));
-        document.getElementById('editOwnForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
-            data.default_hourly_rate = parseInt(data.default_hourly_rate, 10) || 0;
-            try {
-                await updateMyProfile(data);
-                alert('Profile updated. Reloading...');
-                window.location.reload();
-            } catch (err) {
-                alert('Update failed: ' + err.message);
-            }
-        });
-    });
 
     loadAvailability();
 }

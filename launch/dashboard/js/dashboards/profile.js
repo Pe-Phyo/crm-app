@@ -1,9 +1,9 @@
 export default {
-    greeting: null, // dynamically set
+    greeting: null,
     layout: '1fr 1fr',
-    eyeButtonLabel: 'Update',
-    eyeAction: 'open-profile-modal',   // directly triggers the modal
-    eyeMenu: [],                        // no dropdown menu
+    eyeMenu: [
+        { label: '← Back to Teacher Dashboard', action: '/launch/dashboard/dashboard.html?view_as=teacher' }
+    ],
     widgets: [
         { id: 'profile-summary', type: 'profileSummary', position: 'left', title: 'Profile' },
         { id: 'profile-upcoming', type: 'profileUpcoming', position: 'left', title: 'Upcoming Dates' },

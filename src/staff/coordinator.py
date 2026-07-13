@@ -3,16 +3,15 @@ import os
 from typing import Tuple, Any
 from . import auth as staff_auth
 from .index_db import create_staff_index
-from .profile import (
-    handle_own_profile, handle_update_own_profile,
-    handle_own_availability, handle_own_holidays, handle_change_own_password
-)
+from .profile import handle_change_own_password   # only password handler remains
 from .management import (
     handle_list_staff, handle_list_staff_detailed,
     handle_get_staff_detail, handle_update_staff_profile,
     handle_create_staff, handle_approve_staff, handle_delete_staff,
     handle_list_teachers, handle_reset_staff_password
 )
+from ..profiles.coordinator import ProfileCoordinator
+
 
 class StaffCoordinator:
     def __init__(self, root_data_dir: str):
@@ -20,11 +19,13 @@ class StaffCoordinator:
         staff_data_dir = os.path.join(root_data_dir, 'staff')
         if not os.path.exists(os.path.join(staff_data_dir, 'index.db')):
             create_staff_index(root_data_dir)
+        self.profile_coordinator = ProfileCoordinator(root_data_dir)
 
-    def handle(self, method: str, path: str, body: str = None, headers: dict = None) -> Tuple[Any, int]:
+    def handle(self, method: str, path: str, body: str = None,
+               headers: dict = None) -> Tuple[Any, int]:
         token = (headers or {}).get('Authorization', '').replace('Bearer ', '')
 
-        # Public
+        # Public auth routes
         if path == '/auth/login' and method == 'POST':
             data = _parse_body(body)
             username = data.get('username', '')
@@ -36,26 +37,22 @@ class StaffCoordinator:
             staff_auth.logout(token)
             return {'success': True}, 200
 
-        # Authenticated
+        # All following routes require authentication
         session = staff_auth.verify_session(token)
         if not session:
             return {'error': 'Unauthorized'}, 401
 
-        # Open routes (any authenticated user)
+        # Open teacher list (any authenticated user)
         if path == '/staff/teachers' and method == 'GET':
             return handle_list_teachers(self.root_data_dir)
 
-        if path == '/staff/me':
-            if method == 'GET':
-                return handle_own_profile(self.root_data_dir, session)
-            if method == 'PUT':
-                return handle_update_own_profile(self.root_data_dir, session, body)
-        if path.startswith('/staff/me/availability'):
-            return handle_own_availability(self.root_data_dir, session, method, body)
-        if path.startswith('/staff/me/holidays'):
-            return handle_own_holidays(self.root_data_dir, session, method, body)
+        # Password change (still in staff domain — auth table)
         if path == '/staff/me/password' and method == 'PUT':
             return handle_change_own_password(self.root_data_dir, session, body)
+
+        # All other /staff/me routes → profile coordinator
+        if path.startswith('/staff/me'):
+            return self.profile_coordinator.handle(method, path, body, headers)
 
         # Admin / Back-office routes
         if session['role'] not in ('admin', 'back_office'):
@@ -75,14 +72,18 @@ class StaffCoordinator:
             uuid_str = path.split('/')[-1]
             if method == 'GET':
                 return handle_get_staff_detail(self.root_data_dir, uuid_str)
-            if method == 'PUT':
-                if session['role'] == 'admin' or session['user_uuid'] == uuid_str:
-                    return handle_update_staff_profile(self.root_data_dir, uuid_str, body)
-                return {'error': 'Forbidden'}, 403
+
+            # Password reset must come BEFORE generic PUT
             if method == 'PUT' and path.endswith('/password'):
                 if session['role'] == 'admin':
                     return handle_reset_staff_password(self.root_data_dir, uuid_str, body)
                 return {'error': 'Forbidden'}, 403
+
+            if method == 'PUT':
+                if session['role'] == 'admin' or session['user_uuid'] == uuid_str:
+                    return handle_update_staff_profile(self.root_data_dir, uuid_str, body)
+                return {'error': 'Forbidden'}, 403
+
             if method == 'DELETE' and session['role'] == 'admin':
                 return handle_delete_staff(self.root_data_dir, uuid_str, body)
 
